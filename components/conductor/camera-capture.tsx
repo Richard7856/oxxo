@@ -10,14 +10,25 @@ interface CameraCaptureProps {
 export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [stream, setStream] = useState<MediaStream | null>(null);
+    const streamRef = useRef<MediaStream | null>(null); // Use Ref for stream management
+    const [_, setStreamState] = useState<MediaStream | null>(null); // Just for re-render if needed, or remove if not used for rendering
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedFile, setCapturedFile] = useState<File | null>(null);
 
+    const stopCamera = useCallback(() => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+            setStreamState(null);
+        }
+    }, []);
+
     const startCamera = useCallback(async () => {
         try {
+            // Stop any existing stream first
+            stopCamera();
             setLoading(true);
             // Try environment first, fall back to any if needed? 
             // Actually 'facingMode: environment' is usually enough hint.
@@ -46,7 +57,8 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                 });
             }
 
-            setStream(mediaStream);
+            streamRef.current = mediaStream;
+            setStreamState(mediaStream); // Trigger render
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
             }
@@ -58,14 +70,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
             );
             setLoading(false);
         }
-    }, []);
-
-    const stopCamera = useCallback(() => {
-        if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
-            setStream(null);
-        }
-    }, [stream]);
+    }, [stopCamera]);
 
     useEffect(() => {
         if (!capturedImage) {
