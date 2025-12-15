@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import EvidenceUpload from '@/components/conductor/evidence-upload';
 import ActionStep from '@/components/conductor/action-step';
+import IncidentCart from '@/components/conductor/incident-cart';
 import { uploadEvidence } from '@/app/conductor/actions';
 
 interface FlowClientProps {
@@ -63,26 +64,7 @@ export default function FlowClient({
 
         if (currentStep === '5') {
             return (
-                <div className="max-w-md mx-auto">
-                    <h2 className="text-2xl font-bold mb-4">5. Reportar Incidencia</h2>
-                    <p className="mb-4">Describe el problema encontrado:</p>
-                    <textarea className="w-full border p-2 rounded mb-4" rows={4} placeholder="Detalles del problema..."></textarea>
-                    <button onClick={() => goTo('chat_redirect')} className="bg-red-600 text-white px-4 py-2 rounded w-full">
-                        Continuar a Soporte
-                    </button>
-                </div>
-            );
-        }
-
-        if (currentStep === 'chat_redirect') {
-            // Placeholder for Chat redirection logic
-            return (
-                <div className="text-center py-10">
-                    <h2 className="text-xl font-bold mb-4">Redirigiendo a Soporte...</h2>
-                    <button onClick={() => router.push(`/conductor/chat/${reportId}`)} className="text-blue-600 underline">
-                        Ir al Chat (Simulado)
-                    </button>
-                </div>
+                <IncidentCart reportId={reportId} />
             );
         }
 
@@ -207,7 +189,29 @@ export default function FlowClient({
                     stepIndicator="Paso único"
                     initialImage={initialEvidence['facade']}
                     onImageSelected={(file) => handleUpload('facade', file)}
-                    onContinue={() => goTo('chat_redirect')}
+                    onContinue={async () => {
+                        // Save step before going to chat for tienda cerrada
+                        const supabase = (await import('@/lib/supabase/client')).createClient();
+                        const { data: report } = await supabase
+                            .from('reportes')
+                            .select('metadata')
+                            .eq('id', reportId)
+                            .single();
+                        
+                        const currentMetadata = (report?.metadata as Record<string, any>) || {};
+                        await supabase
+                            .from('reportes')
+                            .update({
+                                metadata: {
+                                    ...currentMetadata,
+                                    last_step_before_chat: '4b',
+                                    should_return_to_step: 'finish', // For closed store, finish after chat
+                                },
+                            })
+                            .eq('id', reportId);
+                        
+                        router.push(`/conductor/chat/${reportId}`);
+                    }}
                 />
             );
         }

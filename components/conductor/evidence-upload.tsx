@@ -9,7 +9,7 @@ interface EvidenceUploadProps {
     description: string;
     stepIndicator?: string;
     onImageSelected: (file: File) => Promise<void>;
-    onContinue: () => void;
+    onContinue: () => void | Promise<void>;
     loading?: boolean;
     initialImage?: string | null;
 }

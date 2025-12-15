@@ -40,8 +40,8 @@ export default async function ChatPage({
         <div className="bg-white min-h-screen">
             <header className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href={`/conductor/nuevo-reporte/${id}/flujo`} className="text-gray-600">
-                        ← Volver al Reporte
+                    <Link href="/conductor" className="text-gray-600">
+                        ← Volver al Inicio
                     </Link>
                     <h1 className="font-semibold text-lg">Soporte ({report.stores?.nombre})</h1>
                     <div className="w-8"></div> {/* Spacer */}
@@ -49,14 +49,10 @@ export default async function ChatPage({
             </header>
 
             <main className="max-w-4xl mx-auto p-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center">
-                    <p className="text-blue-800 font-medium">Tiempo de espera estimado</p>
-                    <div className="text-3xl font-bold text-blue-900 my-2">20:00</div>
-                    <p className="text-sm text-blue-600">Un agente te atenderá pronto.</p>
-                </div>
-
                 <ChatInterface
                     reportId={id}
+                    userId={user.id}
+                    reportCreatedAt={report.created_at}
                     initialMessages={messages || []}
                 />
             </main>
