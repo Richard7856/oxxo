@@ -73,7 +73,7 @@ export default function EvidenceUpload({
             )}
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
-            <p className="text-gray-600 mb-6">{description}</p>
+            <p className="text-gray-800 mb-6">{description}</p>
 
             {error && (
                 <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
@@ -100,7 +100,7 @@ export default function EvidenceUpload({
                 ) : (
                     <button
                         onClick={() => setShowCamera(true)}
-                        className="w-full aspect-video bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors mb-4"
+                        className="w-full aspect-video bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors mb-4"
                     >
                         <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />

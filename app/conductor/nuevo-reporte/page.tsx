@@ -42,19 +42,19 @@ export default async function NuevoReportePage() {
                     </div>
                     <div className="flex-1 mx-4 border-t-2 border-gray-300"></div>
                     <div className="flex items-center">
-                        <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-600 rounded-full font-semibold">
+                        <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-800 rounded-full font-semibold">
                             2
                         </div>
-                        <span className="ml-3 font-medium text-gray-400">
+                        <span className="ml-3 font-medium text-gray-700">
                             Tipo de Reporte
                         </span>
                     </div>
                     <div className="flex-1 mx-4 border-t-2 border-gray-300"></div>
                     <div className="flex items-center">
-                        <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-600 rounded-full font-semibold">
+                        <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-800 rounded-full font-semibold">
                             3
                         </div>
-                        <span className="ml-3 font-medium text-gray-400">Evidencias</span>
+                        <span className="ml-3 font-medium text-gray-700">Evidencias</span>
                     </div>
                 </div>
             </div>

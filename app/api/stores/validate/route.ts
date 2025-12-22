@@ -71,21 +71,45 @@ export async function POST(request: NextRequest) {
         // Upsert store in database
         const supabase = await createClient();
 
-        const { data: store, error } = await supabase
+        // First try to find existing store
+        const { data: existingStore } = await supabase
             .from('stores')
-            .upsert(
-                {
+            .select('id')
+            .eq('codigo_tienda', storeData.Codigo)
+            .maybeSingle();
+
+        let store;
+        let error;
+
+        if (existingStore) {
+            // Update existing store (trigger will handle updated_at automatically)
+            const result = await supabase
+                .from('stores')
+                .update({
+                    nombre: storeData.Nombre,
+                    zona: storeData.Zona,
+                    direccion: storeData.Plaza,
+                })
+                .eq('id', existingStore.id)
+                .select()
+                .single();
+            store = result.data;
+            error = result.error;
+        } else {
+            // Insert new store (default values will handle created_at and updated_at)
+            const result = await supabase
+                .from('stores')
+                .insert({
                     codigo_tienda: storeData.Codigo,
                     nombre: storeData.Nombre,
                     zona: storeData.Zona,
-                    direccion: storeData.Plaza, // Using Plaza as address
-                },
-                {
-                    onConflict: 'codigo_tienda',
-                }
-            )
-            .select()
-            .single();
+                    direccion: storeData.Plaza,
+                })
+                .select()
+                .single();
+            store = result.data;
+            error = result.error;
+        }
 
         if (error) {
             console.error('Error upserting store:', error);

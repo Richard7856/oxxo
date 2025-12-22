@@ -222,27 +222,7 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
         incidencias: incidents,
     };
 
-    try {
-        const response = await fetch('https://n8n.srv925698.hstgr.cloud/webhook/template', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-            console.error('Webhook failed:', response.status, await response.text());
-            // We continue anyway as per instructions "no se espera respuesta" implies fire & forget or at least don't block
-            // But usually we want to know if it failed. instructions say "no se espera respuesta en este se abre el primer chat"
-            // which means we treat it as success and go to chat.
-        }
-    } catch (error) {
-        console.error('Webhook error:', error);
-        // Continue to chat even on error? Probably yes to not block user.
-    }
-
-    // Save incidents to DB as well for record
+    // Save incidents to DB first (critical operation)
     const { error: updateError } = await supabase
         .from('reportes')
         .update({
@@ -252,11 +232,24 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
 
     if (updateError) {
         console.error('Error saving incidents to DB:', updateError);
+        // This is a critical error, but we'll still redirect to chat
+        // The user can see the error in console but won't be blocked
     }
 
-    // Create a system message in chat to indicate report was sent? 
-    // Or just redirect.
+    // Send webhook (non-blocking, fire-and-forget)
+    // Don't await or show errors to user - this is async notification
+    fetch('https://n8n.srv925698.hstgr.cloud/webhook/template', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    }).catch((error) => {
+        // Silently log webhook errors - don't block user flow
+        console.error('Webhook error (non-blocking):', error);
+    });
 
+    // Redirect to chat - this always succeeds
     redirect(`/conductor/chat/${reportId}`);
 }
 

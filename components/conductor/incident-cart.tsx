@@ -78,7 +78,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
         <div className="max-w-md mx-auto space-y-8 pb-10">
             <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Reportar Incidencias</h2>
-                <p className="text-gray-600">Añade los productos con incidencias, uno por uno.</p>
+                <p className="text-gray-800">Añade los productos con incidencias, uno por uno.</p>
             </div>
 
             {/* Add Item Form */}
@@ -94,7 +94,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                                 type="text"
                                 value={productName}
                                 onChange={(e) => setProductName(e.target.value)}
-                                className="w-full border p-2 rounded"
+                                className="w-full border p-2 rounded text-gray-900 placeholder-gray-600"
                                 placeholder="Escribe el nombre..."
                             />
                             <button onClick={() => setCustomProduct(false)} className="text-blue-600 text-sm whitespace-nowrap">
@@ -113,7 +113,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                                         setProductName(e.target.value);
                                     }
                                 }}
-                                className="w-full border p-2 rounded"
+                                className="w-full border p-2 rounded text-gray-900"
                             >
                                 <option value="">Seleccionar...</option>
                                 {COMMON_PRODUCTS.map((p) => (
@@ -133,7 +133,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                         inputMode="decimal"
                         value={quantity}
                         onChange={(e) => setQuantity(e.target.value)}
-                        className="w-full border p-2 rounded"
+                        className="w-full border p-2 rounded text-gray-900 placeholder-gray-600"
                         placeholder="Ej. 1.5 o 3 cajas"
                     />
                 </div>
@@ -152,7 +152,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                                     onChange={(e) => setReason(e.target.value)}
                                     className="text-red-600 focus:ring-red-500"
                                 />
-                                <span className="text-sm">{r}</span>
+                                <span className="text-sm text-gray-900">{r}</span>
                             </label>
                         ))}
                     </div>
@@ -164,7 +164,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                     <textarea
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
-                        className="w-full border p-2 rounded"
+                        className="w-full border p-2 rounded text-gray-900 placeholder-gray-600"
                         rows={2}
                         placeholder="Detalles adicionales..."
                     />
@@ -189,7 +189,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                                 <div>
                                     <p className="font-bold text-gray-900">{item.quantity} - {item.productName}</p>
                                     <p className="text-sm text-red-600 font-medium">{item.reason}</p>
-                                    {item.note && <p className="text-sm text-gray-500 mt-1">"{item.note}"</p>}
+                                    {item.note && <p className="text-sm text-gray-700 mt-1">"{item.note}"</p>}
                                 </div>
                                 <button
                                     onClick={() => handleRemoveItem(item.id)}

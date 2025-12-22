@@ -48,7 +48,7 @@ export default async function ReporteTipoPage({
                         <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-semibold">
                             ✓
                         </div>
-                        <span className="ml-3 font-medium text-gray-600">Tienda Validada</span>
+                        <span className="ml-3 font-medium text-gray-800">Tienda Validada</span>
                     </div>
                     <div className="flex-1 mx-4 border-t-2 border-green-600"></div>
                     <div className="flex items-center">
@@ -59,23 +59,23 @@ export default async function ReporteTipoPage({
                     </div>
                     <div className="flex-1 mx-4 border-t-2 border-gray-300"></div>
                     <div className="flex items-center opacity-50">
-                        <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-600 rounded-full font-semibold">
+                        <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-800 rounded-full font-semibold">
                             3
                         </div>
-                        <span className="ml-3 font-medium text-gray-400">Evidencias</span>
+                        <span className="ml-3 font-medium text-gray-700">Evidencias</span>
                     </div>
                 </div>
             </div>
 
             {/* Store Info Card */}
             <div className="bg-white rounded-lg shadow p-6 mb-8">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Tienda Seleccionada</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Tienda Seleccionada</h3>
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-lg font-semibold text-gray-900">
                             {reporte.stores.nombre}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-800">
                             Código: {reporte.stores.codigo_tienda} | Zona: {reporte.stores.zona}
                         </p>
                     </div>

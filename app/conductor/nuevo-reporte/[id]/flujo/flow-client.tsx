@@ -135,7 +135,7 @@ export default function FlowClient({
             return (
                 <div className="max-w-md mx-auto text-center py-8">
                     <h2 className="text-2xl font-bold mb-4">9. Confirmar Ticket</h2>
-                    <p className="text-gray-600 mb-8">Datos extraídos del ticket...</p>
+                    <p className="text-gray-800 mb-8">Datos extraídos del ticket...</p>
                     <button onClick={() => goTo('return_check')} className="bg-red-600 text-white px-8 py-3 rounded-lg w-full">
                         Confirmar y Continuar
                     </button>
@@ -171,7 +171,7 @@ export default function FlowClient({
             return (
                 <div className="max-w-md mx-auto text-center py-8">
                     <h2 className="text-2xl font-bold mb-4">11. Confirmar Devolución</h2>
-                    <p className="text-gray-600 mb-8">Datos extraídos de la devolución...</p>
+                    <p className="text-gray-800 mb-8">Datos extraídos de la devolución...</p>
                     <button onClick={() => goTo('finish')} className="bg-red-600 text-white px-8 py-3 rounded-lg w-full">
                         Confirmar y Finalizar
                     </button>
@@ -241,7 +241,7 @@ export default function FlowClient({
                     </svg>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Reporte Enviado!</h2>
-                <p className="text-gray-600 mb-8">Tu reporte ha sido registrado exitosamente.</p>
+                <p className="text-gray-800 mb-8">Tu reporte ha sido registrado exitosamente.</p>
                 <button
                     onClick={() => router.push('/conductor')}
                     className="bg-gray-900 text-white px-8 py-3 rounded-lg w-full hover:bg-gray-800 transition-colors"

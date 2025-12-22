@@ -132,7 +132,7 @@ export default function LoginPage() {
                                 type="email"
                                 autoComplete="email"
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-600"
                                 placeholder="tu@email.com"
                             />
                         </div>
@@ -149,11 +149,11 @@ export default function LoginPage() {
                                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                                 required
                                 minLength={6}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-600"
                                 placeholder="••••••••"
                             />
                             {mode === 'signup' && (
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-gray-700">
                                     Mínimo 6 caracteres
                                 </p>
                             )}

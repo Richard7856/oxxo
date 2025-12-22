@@ -16,20 +16,31 @@ interface Message {
 interface ChatInterfaceProps {
     reportId: string;
     userId: string; // Added userId prop
-    reportCreatedAt: string; // New prop for persistent timer
+    reportCreatedAt: string; // When report was created/submitted
+    timeoutAt?: string | null; // When timeout expires (20 min from submission)
     initialMessages: Message[];
 }
 
-function usePersistentTimer(createdAt: string, durationMinutes: number) {
+function usePersistentTimer(timeoutAt: string | null | undefined, fallbackCreatedAt: string, durationMinutes: number) {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
         const calculateTimeLeft = () => {
-            const start = new Date(createdAt).getTime();
+            // Use timeout_at if available (more accurate), otherwise calculate from created_at
+            let endTime: number;
+            
+            if (timeoutAt) {
+                // Use the timeout_at directly (20 min from submission)
+                endTime = new Date(timeoutAt).getTime();
+            } else {
+                // Fallback: calculate from created_at + duration
+                const start = new Date(fallbackCreatedAt).getTime();
+                endTime = start + durationMinutes * 60 * 1000;
+            }
+            
             const now = new Date().getTime();
-            const end = start + durationMinutes * 60 * 1000;
-            const remaining = Math.max(0, Math.floor((end - now) / 1000));
+            const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
 
             setTimeLeft(remaining);
             setIsExpired(remaining === 0);
@@ -39,7 +50,7 @@ function usePersistentTimer(createdAt: string, durationMinutes: number) {
 
         const interval = setInterval(calculateTimeLeft, 1000);
         return () => clearInterval(interval);
-    }, [createdAt, durationMinutes]);
+    }, [timeoutAt, fallbackCreatedAt, durationMinutes]);
 
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -48,7 +59,7 @@ function usePersistentTimer(createdAt: string, durationMinutes: number) {
     return { formatted, isExpired, timeLeft };
 }
 
-export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages }: ChatInterfaceProps) {
+export default function ChatInterface({ reportId, userId, reportCreatedAt, timeoutAt, initialMessages }: ChatInterfaceProps) {
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
@@ -56,7 +67,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const supabase = createClient();
 
-    const { formatted: timeFormatted, isExpired } = usePersistentTimer(reportCreatedAt, 20);
+    const { formatted: timeFormatted, isExpired } = usePersistentTimer(timeoutAt, reportCreatedAt, 20);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -187,7 +198,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                    <div className="h-full flex flex-col items-center justify-center text-gray-600">
                         <p>No hay mensajes aún.</p>
                         <p className="text-sm">Describe tu problema para recibir ayuda.</p>
                     </div>
@@ -208,7 +219,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                                             }`}
                                     >
                                         <p className="text-sm">{msg.text}</p>
-                                        <span className={`text-xs block mt-1 ${isMe ? 'text-blue-100' : 'text-gray-400'}`}>
+                                        <span className={`text-xs block mt-1 ${isMe ? 'text-blue-100' : 'text-gray-600'}`}>
                                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
@@ -227,7 +238,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder={isExpired ? "Chat cerrado" : "Escribe un mensaje..."}
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-600 bg-white disabled:bg-gray-100 disabled:text-gray-600"
                     disabled={isExpired || sending}
                 />
                 <button

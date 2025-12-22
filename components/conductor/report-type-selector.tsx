@@ -142,7 +142,7 @@ export default function ReportTypeSelector({
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     Selecciona el Tipo de Reporte
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-gray-800">
                     Elige la opción que mejor describa la situación en la tienda
                 </p>
             </div>
@@ -175,7 +175,7 @@ export default function ReportTypeSelector({
                                     <h3 className="text-lg font-semibold text-gray-900">
                                         {type.label}
                                     </h3>
-                                    <p className="mt-1 text-sm text-gray-600">{type.description}</p>
+                                    <p className="mt-1 text-sm text-gray-800">{type.description}</p>
                                 </div>
                                 {isSelected && (
                                     <div className="flex-shrink-0 ml-2">
