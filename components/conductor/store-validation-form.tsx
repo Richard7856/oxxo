@@ -37,15 +37,31 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
                 body: JSON.stringify({ codigo_tienda: code }),
             });
 
-            const data = await response.json();
+            // Parse JSON safely
+            let data;
+            try {
+                const responseText = await response.text();
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error('Respuesta vacía del servidor');
+                }
+                data = JSON.parse(responseText);
+            } catch (parseError: any) {
+                console.error('Error parsing response:', parseError);
+                throw new Error('Error al procesar la respuesta del servidor');
+            }
 
             if (!response.ok) {
-                throw new Error(data.error || 'Error al validar la tienda');
+                throw new Error(data?.error || 'Error al validar la tienda');
+            }
+
+            if (!data.store) {
+                throw new Error('Datos de tienda no recibidos');
             }
 
             setStoreData(data.store);
         } catch (err: any) {
-            setError(err.message);
+            console.error('Store validation error:', err);
+            setError(err.message || 'Error al validar la tienda. Por favor intenta nuevamente.');
         } finally {
             setLoading(false);
         }

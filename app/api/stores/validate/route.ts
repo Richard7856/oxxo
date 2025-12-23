@@ -47,14 +47,43 @@ export async function POST(request: NextRequest) {
         });
 
         if (!n8nResponse.ok) {
-            console.error('n8n validation failed:', n8nResponse.status, n8nResponse.statusText);
+            const errorText = await n8nResponse.text();
+            console.error('n8n validation failed:', n8nResponse.status, n8nResponse.statusText, errorText);
             return Response.json(
                 { error: `Tienda con código ${codigo_tienda} no encontrada en el sistema` },
                 { status: 404 }
             );
         }
 
-        const responseData: N8nStoreResponse[] = await n8nResponse.json();
+        // Parse JSON response safely
+        let responseData: N8nStoreResponse[];
+        try {
+            const responseText = await n8nResponse.text();
+            if (!responseText || responseText.trim() === '') {
+                console.error('Empty response from n8n for store:', codigo_tienda);
+                return Response.json(
+                    { error: 'Error al validar la tienda: respuesta vacía del servidor' },
+                    { status: 500 }
+                );
+            }
+            
+            try {
+                responseData = JSON.parse(responseText);
+            } catch (parseError: any) {
+                console.error('Error parsing n8n JSON response:', parseError);
+                console.error('Response text received:', responseText.substring(0, 500)); // Log first 500 chars
+                return Response.json(
+                    { error: 'Error al procesar la respuesta del servidor de validación' },
+                    { status: 500 }
+                );
+            }
+        } catch (error: any) {
+            console.error('Error reading n8n response:', error);
+            return Response.json(
+                { error: 'Error al leer la respuesta del servidor' },
+                { status: 500 }
+            );
+        }
 
         // n8n returns an array, get first item
         if (!responseData || responseData.length === 0) {
@@ -113,8 +142,24 @@ export async function POST(request: NextRequest) {
 
         if (error) {
             console.error('Error upserting store:', error);
+            // Log detailed error for debugging
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+            });
+            
+            // Provide more specific error message based on error code
+            let errorMessage = 'Error al guardar la tienda en la base de datos';
+            if (error.code === '42501') {
+                errorMessage = 'No tienes permisos para realizar esta operación';
+            } else if (error.code === '23505') {
+                errorMessage = 'La tienda ya existe en el sistema';
+            }
+            
             return Response.json(
-                { error: 'Error al guardar la tienda en la base de datos' },
+                { error: errorMessage },
                 { status: 500 }
             );
         }
