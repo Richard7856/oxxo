@@ -35,8 +35,8 @@ export default function FlowClient({
     // Validate that the step exists for this report type
     const validSteps = getValidStepsForType(reportType);
     const [isRedirecting, setIsRedirecting] = useState(false);
-    const [ticketData, setTicketData] = useState<ExtractedTicketData | null>(initialTicketData);
-    const [returnTicketData, setReturnTicketData] = useState<ExtractedTicketData | null>(initialReturnTicketData);
+    const [ticketData, setTicketData] = useState<ExtractedTicketData | null>(initialTicketData ?? null);
+    const [returnTicketData, setReturnTicketData] = useState<ExtractedTicketData | null>(initialReturnTicketData ?? null);
     
     useEffect(() => {
         // Validate step on mount and when step changes
