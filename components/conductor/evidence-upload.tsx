@@ -79,6 +79,11 @@ export default function EvidenceUpload({
         setUploadingSecond(true);
         setError(null);
 
+        if (!onSecondImageSelected) {
+            setUploadingSecond(false);
+            return;
+        }
+        
         try {
             await onSecondImageSelected(file);
         } catch (err: any) {
