@@ -57,18 +57,24 @@ export async function createClient() {
 /**
  * Service role client for admin operations
  * ONLY use in server components/API routes, NEVER expose to client
+ * Uses @supabase/supabase-js directly for service role (bypasses RLS)
  */
 export function createServiceRoleClient() {
-    return createServerClient(
+    // Dynamic import to avoid bundling issues
+    const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
+    
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
+    }
+    
+    return createSupabaseClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
         {
-            cookies: {
-                getAll() {
-                    return [];
-                },
-                setAll() { },
-            },
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
         }
     );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 type ReporteType = 'entrega' | 'tienda_cerrada' | 'bascula';
@@ -11,6 +11,11 @@ interface ReportTypeOption {
     description: string;
     icon: React.ReactNode;
     color: string;
+}
+
+interface ReportTypeSelectorProps {
+    reporteId: string;
+    existingType?: string | null;
 }
 
 const REPORT_TYPES: ReportTypeOption[] = [
@@ -66,13 +71,22 @@ const REPORT_TYPES: ReportTypeOption[] = [
 
 export default function ReportTypeSelector({
     reporteId,
-}: {
-    reporteId: string;
-}) {
+    existingType,
+}: ReportTypeSelectorProps) {
     const router = useRouter();
-    const [selectedType, setSelectedType] = useState<ReporteType | null>(null);
+    const [selectedType, setSelectedType] = useState<ReporteType | null>(
+        (existingType as ReporteType) || null
+    );
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const isTypeLocked = !!existingType; // Si ya existe tipo, está bloqueado
+
+    // Si ya hay un tipo seleccionado, cargarlo automáticamente
+    useEffect(() => {
+        if (existingType) {
+            setSelectedType(existingType as ReporteType);
+        }
+    }, [existingType]);
 
     async function handleContinue() {
         if (!selectedType) {
@@ -80,16 +94,35 @@ export default function ReportTypeSelector({
             return;
         }
 
+        // Si el tipo ya está guardado, solo redirigir al flujo
+        if (isTypeLocked) {
+            router.push(`/conductor/nuevo-reporte/${reporteId}/flujo`);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
         try {
-            // Update reporte type
+            // Determine initial step based on report type
+            let initialStep: string;
+            if (selectedType === 'entrega') {
+                initialStep = '4a';
+            } else if (selectedType === 'tienda_cerrada') {
+                initialStep = '4b';
+            } else if (selectedType === 'bascula') {
+                initialStep = '4c';
+            } else {
+                initialStep = '4a'; // Default
+            }
+
+            // Update reporte type and set initial current_step
             const response = await fetch(`/api/reportes/${reporteId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tipo_reporte: selectedType,
+                    current_step: initialStep,
                 }),
             });
 
@@ -140,11 +173,20 @@ export default function ReportTypeSelector({
         <div className="space-y-6">
             <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Selecciona el Tipo de Reporte
+                    {isTypeLocked ? 'Tipo de Reporte Seleccionado' : 'Selecciona el Tipo de Reporte'}
                 </h2>
                 <p className="text-gray-800">
-                    Elige la opción que mejor describa la situación en la tienda
+                    {isTypeLocked
+                        ? 'Este tipo de reporte ya fue seleccionado y no puede cambiarse. Continúa con el proceso.'
+                        : 'Elige la opción que mejor describa la situación en la tienda'}
                 </p>
+                {isTypeLocked && (
+                    <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                        <p className="text-sm text-yellow-700">
+                            <strong>Nota:</strong> Una vez seleccionado, el tipo de reporte no puede modificarse.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {error && (
@@ -158,12 +200,22 @@ export default function ReportTypeSelector({
                 {REPORT_TYPES.map((type) => {
                     const isSelected = selectedType === type.value;
                     const colors = getColorClasses(type.color, isSelected);
+                    const isDisabled = isTypeLocked && !isSelected; // Deshabilitar si está bloqueado y no es el seleccionado
 
                     return (
                         <button
                             key={type.value}
-                            onClick={() => setSelectedType(type.value)}
-                            className={`border-2 ${colors.border} ${colors.bg} rounded-lg p-6 text-left transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${type.color}-500`}
+                            onClick={() => {
+                                if (!isTypeLocked) {
+                                    setSelectedType(type.value);
+                                }
+                            }}
+                            disabled={isDisabled}
+                            className={`border-2 ${colors.border} ${colors.bg} rounded-lg p-6 text-left transition-all ${
+                                isDisabled
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : 'hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2'
+                            } focus:ring-${type.color}-500`}
                         >
                             <div className="flex items-start">
                                 <div
@@ -207,7 +259,11 @@ export default function ReportTypeSelector({
                     disabled={!selectedType || loading}
                     className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                    {loading ? 'Guardando...' : 'Continuar'}
+                    {loading
+                        ? 'Guardando...'
+                        : isTypeLocked
+                          ? 'Continuar con el Reporte'
+                          : 'Continuar'}
                 </button>
             </div>
         </div>

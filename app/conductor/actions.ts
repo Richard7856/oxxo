@@ -94,7 +94,7 @@ export async function uploadEvidence(
     return { success: true, url: publicUrl };
 }
 
-export async function sendMessage(reportId: string, text: string) {
+export async function uploadChatImage(reportId: string, file: File) {
     const supabase = await createClient();
     const {
         data: { user },
@@ -102,11 +102,48 @@ export async function sendMessage(reportId: string, text: string) {
 
     if (!user) return { error: 'No autorizado' };
 
+    // Unique filename for chat images
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `${reportId}/chat_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    // Upload to 'evidence' bucket
+    const { error: uploadError } = await supabase.storage
+        .from('evidence')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        console.error('Upload Error:', uploadError);
+        return { error: 'Error al subir la imagen' };
+    }
+
+    // Get Public URL
+    const {
+        data: { publicUrl },
+    } = supabase.storage.from('evidence').getPublicUrl(filePath);
+
+    return { success: true, url: publicUrl };
+}
+
+export async function sendMessage(reportId: string, text: string, imageUrl?: string | null) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Validate that message has content
+    if (!text?.trim() && !imageUrl) {
+        return { error: 'El mensaje debe tener texto o imagen' };
+    }
+
     const { error } = await supabase.from('messages').insert({
         reporte_id: reportId,
         sender: 'user',
         sender_user_id: user.id,
-        text: text,
+        text: text?.trim() || null,
+        image_url: imageUrl || null,
     });
 
     if (error) {
@@ -135,12 +172,13 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
 
     if (!report) return { error: 'Reporte no encontrado' };
 
-    // Save the step where we're coming from (step 5 = incidents)
-    // This will be used to return to step 6 after chat resolves
+    // Save current_step as 'chat', incident_details, and metadata for returning after chat
     const currentMetadata = (report.metadata as Record<string, any>) || {};
     await supabase
         .from('reportes')
         .update({
+            current_step: 'chat',
+            incident_details: incidents, // Save incidents with images
             metadata: {
                 ...currentMetadata,
                 last_step_before_chat: '5', // Coming from incidents form
@@ -292,13 +330,19 @@ export async function resolveReport(reportId: string) {
         nextStep = metadata.should_return_to_step;
     } else if (report.tipo_reporte === 'tienda_cerrada') {
         // For closed store, after resolving from chat, finish the report
-        redirect(`/conductor/nuevo-reporte/${reportId}/flujo?step=finish`);
-        return;
+        nextStep = 'finish';
     } else if (report.tipo_reporte === 'entrega') {
         // For delivery, continue from product arranged (step 6)
         nextStep = '6';
     }
 
-    // Redirect to the correct step
+    // Update current_step and redirect to the correct step
+    await supabase
+        .from('reportes')
+        .update({
+            current_step: nextStep,
+        })
+        .eq('id', reportId);
+
     redirect(`/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}`);
 }

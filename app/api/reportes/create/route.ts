@@ -24,11 +24,12 @@ export async function POST(request: NextRequest) {
         const finalConductorNombre = conductor_nombre || profile?.display_name || 'Conductor';
 
         // Call atomic function to create reporte
+        // tipo_reporte will be NULL initially and set when user selects type
         const { data, error } = await supabase.rpc('create_reporte_atomic', {
             p_user_id: user_id,
             p_store_id: store_id,
-            p_tipo_reporte: 'rechazo_completo', // Default, will be updated in next step
             p_conductor_nombre: finalConductorNombre,
+            p_tipo_reporte: null, // NULL initially, will be set in next step
         });
 
         if (error) {

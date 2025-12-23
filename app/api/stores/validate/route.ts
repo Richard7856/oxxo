@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 
 interface N8nStoreResponse {
@@ -98,7 +98,9 @@ export async function POST(request: NextRequest) {
         console.log('Store found:', storeData);
 
         // Upsert store in database
-        const supabase = await createClient();
+        // Use service role client to bypass RLS for store creation/updates
+        // This ensures the operation works regardless of user role
+        const supabase = createServiceRoleClient();
 
         // First try to find existing store
         const { data: existingStore } = await supabase

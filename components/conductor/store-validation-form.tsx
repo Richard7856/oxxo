@@ -89,8 +89,8 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
                 throw new Error(data.error || 'Error al crear el reporte');
             }
 
-            // Redirect to next step
-            router.push(`/conductor/nuevo-reporte/${data.reporte_id}`);
+            // Redirect to next step - use replace to avoid back button issues
+            router.replace(`/conductor/nuevo-reporte/${data.reporte_id}`);
         } catch (err: any) {
             setError(err.message);
         } finally {

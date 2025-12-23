@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import ReportTypeSelector from '@/components/conductor/report-type-selector';
 import CancelReportButton from '@/components/conductor/cancel-report-button';
+import { getNextStepForReport } from '@/lib/flow-helpers';
 
 export default async function ReporteTipoPage({
     params,
@@ -18,12 +19,17 @@ export default async function ReporteTipoPage({
         redirect('/login');
     }
 
-    // Get reporte
-    const { data: reporte } = await supabase
+    // Get reporte - usar datos desnormalizados del reporte para evitar problemas con RLS en joins
+    const { data: reporte, error: reporteError } = await supabase
         .from('reportes')
-        .select('*, stores(*)')
+        .select('*')
         .eq('id', id)
         .single();
+
+    if (reporteError) {
+        console.error('Error fetching reporte:', reporteError);
+        redirect('/conductor');
+    }
 
     if (!reporte) {
         redirect('/conductor');
@@ -34,10 +40,53 @@ export default async function ReporteTipoPage({
         redirect('/conductor');
     }
 
-    // If already has type selected, we stay here for now until step 3 is ready
-    // if (reporte.tipo_reporte && reporte.tipo_reporte !== 'rechazo_completo') {
-    //     redirect(`/conductor/nuevo-reporte/${id}/evidencia`);
-    // }
+    // Usar datos desnormalizados del reporte (store_nombre, store_codigo, store_zona)
+    // para evitar problemas con RLS en la relación con stores
+    const storeInfo = {
+        nombre: reporte.store_nombre,
+        codigo_tienda: reporte.store_codigo,
+        zona: reporte.store_zona,
+    };
+
+    // Si ya tiene tipo de reporte seleccionado (y es un tipo válido con flujo), redirigir al flujo
+    // Tipos válidos con flujo: entrega, tienda_cerrada, bascula
+    const tiposValidosConFlujo = ['entrega', 'tienda_cerrada', 'bascula'];
+    if (reporte.tipo_reporte && tiposValidosConFlujo.includes(reporte.tipo_reporte)) {
+        // Si current_step es 'chat' o hay metadata indicando chat, redirigir al chat
+        const metadata = (reporte.metadata as Record<string, any>) || {};
+        if (reporte.current_step === 'chat' || (metadata.last_step_before_chat && reporte.status === 'submitted')) {
+            redirect(`/conductor/chat/${id}`);
+            return;
+        }
+        
+        // Si tiene current_step, usarlo; sino calcularlo
+        if (reporte.current_step && reporte.current_step !== 'chat') {
+            redirect(`/conductor/nuevo-reporte/${id}/flujo?step=${reporte.current_step}`);
+        } else {
+            // Calcular paso inicial basado en tipo
+            let initialStep: string;
+            if (reporte.tipo_reporte === 'entrega') {
+                initialStep = '4a';
+            } else if (reporte.tipo_reporte === 'tienda_cerrada') {
+                initialStep = '4b';
+            } else if (reporte.tipo_reporte === 'bascula') {
+                initialStep = '4c';
+            } else {
+                // Default fallback
+                initialStep = '4a';
+            }
+            
+            // Guardar el paso inicial
+            await supabase
+                .from('reportes')
+                .update({ current_step: initialStep })
+                .eq('id', id);
+            
+            redirect(`/conductor/nuevo-reporte/${id}/flujo?step=${initialStep}`);
+        }
+    }
+    
+    // Si tiene tipo_reporte pero no es válido (ej: 'rechazo_completo'), mostrar selector para cambiar
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -73,10 +122,10 @@ export default async function ReporteTipoPage({
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-lg font-semibold text-gray-900">
-                            {reporte.stores.nombre}
+                            {storeInfo.nombre}
                         </p>
                         <p className="text-sm text-gray-800">
-                            Código: {reporte.stores.codigo_tienda} | Zona: {reporte.stores.zona}
+                            Código: {storeInfo.codigo_tienda} | Zona: {storeInfo.zona}
                         </p>
                     </div>
                     <CancelReportButton reportId={id} />
@@ -85,7 +134,7 @@ export default async function ReporteTipoPage({
 
             {/* Selector */}
             <div className="bg-white rounded-lg shadow p-8">
-                <ReportTypeSelector reporteId={id} />
+                <ReportTypeSelector reporteId={id} existingType={reporte.tipo_reporte} />
             </div>
         </div>
     );
