@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 
 interface N8nStoreResponse {
@@ -47,43 +47,14 @@ export async function POST(request: NextRequest) {
         });
 
         if (!n8nResponse.ok) {
-            const errorText = await n8nResponse.text();
-            console.error('n8n validation failed:', n8nResponse.status, n8nResponse.statusText, errorText);
+            console.error('n8n validation failed:', n8nResponse.status, n8nResponse.statusText);
             return Response.json(
                 { error: `Tienda con código ${codigo_tienda} no encontrada en el sistema` },
                 { status: 404 }
             );
         }
 
-        // Parse JSON response safely
-        let responseData: N8nStoreResponse[];
-        try {
-            const responseText = await n8nResponse.text();
-            if (!responseText || responseText.trim() === '') {
-                console.error('Empty response from n8n for store:', codigo_tienda);
-                return Response.json(
-                    { error: 'Error al validar la tienda: respuesta vacía del servidor' },
-                    { status: 500 }
-                );
-            }
-            
-            try {
-                responseData = JSON.parse(responseText);
-            } catch (parseError: any) {
-                console.error('Error parsing n8n JSON response:', parseError);
-                console.error('Response text received:', responseText.substring(0, 500)); // Log first 500 chars
-                return Response.json(
-                    { error: 'Error al procesar la respuesta del servidor de validación' },
-                    { status: 500 }
-                );
-            }
-        } catch (error: any) {
-            console.error('Error reading n8n response:', error);
-            return Response.json(
-                { error: 'Error al leer la respuesta del servidor' },
-                { status: 500 }
-            );
-        }
+        const responseData: N8nStoreResponse[] = await n8nResponse.json();
 
         // n8n returns an array, get first item
         if (!responseData || responseData.length === 0) {
@@ -98,70 +69,28 @@ export async function POST(request: NextRequest) {
         console.log('Store found:', storeData);
 
         // Upsert store in database
-        // Use service role client to bypass RLS for store creation/updates
-        // This ensures the operation works regardless of user role
-        const supabase = createServiceRoleClient();
+        const supabase = await createClient();
 
-        // First try to find existing store
-        const { data: existingStore } = await supabase
+        const { data: store, error } = await supabase
             .from('stores')
-            .select('id')
-            .eq('codigo_tienda', storeData.Codigo)
-            .maybeSingle();
-
-        let store;
-        let error;
-
-        if (existingStore) {
-            // Update existing store (trigger will handle updated_at automatically)
-            const result = await supabase
-                .from('stores')
-                .update({
-                    nombre: storeData.Nombre,
-                    zona: storeData.Zona,
-                    direccion: storeData.Plaza,
-                })
-                .eq('id', existingStore.id)
-                .select()
-                .single();
-            store = result.data;
-            error = result.error;
-        } else {
-            // Insert new store (default values will handle created_at and updated_at)
-            const result = await supabase
-                .from('stores')
-                .insert({
+            .upsert(
+                {
                     codigo_tienda: storeData.Codigo,
                     nombre: storeData.Nombre,
                     zona: storeData.Zona,
-                    direccion: storeData.Plaza,
-                })
-                .select()
-                .single();
-            store = result.data;
-            error = result.error;
-        }
+                    direccion: storeData.Plaza, // Using Plaza as address
+                },
+                {
+                    onConflict: 'codigo_tienda',
+                }
+            )
+            .select()
+            .single();
 
         if (error) {
             console.error('Error upserting store:', error);
-            // Log detailed error for debugging
-            console.error('Error details:', {
-                code: error.code,
-                message: error.message,
-                details: error.details,
-                hint: error.hint,
-            });
-            
-            // Provide more specific error message based on error code
-            let errorMessage = 'Error al guardar la tienda en la base de datos';
-            if (error.code === '42501') {
-                errorMessage = 'No tienes permisos para realizar esta operación';
-            } else if (error.code === '23505') {
-                errorMessage = 'La tienda ya existe en el sistema';
-            }
-            
             return Response.json(
-                { error: errorMessage },
+                { error: 'Error al guardar la tienda en la base de datos' },
                 { status: 500 }
             );
         }

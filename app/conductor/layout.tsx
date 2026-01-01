@@ -42,7 +42,7 @@ export default async function ConductorLayout({
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Panel de Conductor</h1>
-                            <p className="text-sm text-gray-800">
+                            <p className="text-sm text-gray-600">
                                 {profile?.display_name || user.email}
                             </p>
                         </div>

@@ -20,7 +20,7 @@ export default function ActionStep({
     return (
         <div className="max-w-md mx-auto py-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
-            {description && <p className="text-gray-800 mb-8">{description}</p>}
+            {description && <p className="text-gray-600 mb-8">{description}</p>}
 
             <div className="grid grid-cols-2 gap-4">
                 <button

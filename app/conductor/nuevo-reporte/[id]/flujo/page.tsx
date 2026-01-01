@@ -2,13 +2,6 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import FlowClient from './flow-client';
 
-function getDefaultStep(type: string): string {
-    if (type === 'entrega') return '4a';
-    if (type === 'tienda_cerrada') return '4b';
-    if (type === 'bascula') return '4c';
-    return '4a';
-}
-
 export default async function FlujoPage({
     params,
     searchParams,
@@ -43,36 +36,30 @@ export default async function FlujoPage({
         redirect('/conductor');
     }
 
-    // Validate tipo_reporte - must be a valid type with flow
-    const tiposValidosConFlujo = ['entrega', 'tienda_cerrada', 'bascula'];
-    if (!report.tipo_reporte || !tiposValidosConFlujo.includes(report.tipo_reporte)) {
-        redirect(`/conductor/nuevo-reporte/${id}`);
+    // Determine the step to use: URL param > saved step > default
+    function getDefaultStep(type: string) {
+        if (type === 'entrega') return '4a';
+        if (type === 'tienda_cerrada') return '4b';
+        if (type === 'bascula') return '4c';
+        return 'unknown';
     }
 
-    // If current_step is 'chat', redirect to chat
-    if (report.current_step === 'chat' && report.status === 'submitted') {
+    // Si el paso guardado es 'chat' o 'chat_redirect' y el reporte está en 'submitted',
+    // redirigir directamente al chat en lugar del flujo
+    const savedStep = report.current_step as string | null;
+    if (!step && (savedStep === 'chat' || savedStep === 'chat_redirect') && report.status === 'submitted') {
         redirect(`/conductor/chat/${id}`);
     }
 
-    // Determine step to use: URL param > current_step > default for tipo
-    let stepToUse = step || report.current_step || getDefaultStep(report.tipo_reporte);
+    // Si el paso guardado no es válido o es un paso de chat pero el reporte no está submitted,
+    // usar el paso por defecto
+    const defaultStep = getDefaultStep(report.tipo_reporte || 'entrega');
+    let initialStep = step || savedStep || defaultStep;
     
-    // If no step in URL but current_step exists, redirect to that step to keep URL in sync
-    if (!step && report.current_step && report.current_step !== 'chat') {
-        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=${report.current_step}`);
-    }
-
-    // Ensure current_step is saved if it doesn't exist or doesn't match URL
-    if (step && (!report.current_step || report.current_step !== step)) {
-        await supabase
-            .from('reportes')
-            .update({ current_step: step })
-            .eq('id', id);
-    } else if (!report.current_step && stepToUse) {
-        await supabase
-            .from('reportes')
-            .update({ current_step: stepToUse })
-            .eq('id', id);
+    // Validar que el paso inicial sea válido para el tipo de reporte
+    if (initialStep === 'chat' || initialStep === 'chat_redirect') {
+        // Si es un paso de chat pero no debería estar aquí, usar el default
+        initialStep = defaultStep;
     }
 
     return (
@@ -82,8 +69,7 @@ export default async function FlujoPage({
                     reportId={id}
                     reportType={report.tipo_reporte || 'entrega'}
                     initialEvidence={(report.evidence as Record<string, string>) || {}}
-                    ticketData={report.ticket_data || null}
-                    returnTicketData={report.return_ticket_data || null}
+                    initialStep={initialStep}
                 />
             </div>
         </div>

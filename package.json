@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > lib/types/database.types.ts"
@@ -14,16 +14,19 @@
     "@supabase/supabase-js": "^2.39.0",
     "date-fns": "^3.0.6",
     "next": "^16.0.10",
+    "next-pwa": "^5.6.0",
     "openai": "^4.24.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-webcam": "^7.2.0",
+    "web-push": "^3.6.7",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.0.1",
     "eslint": "^9",
     "eslint-config-next": "15.1.3",

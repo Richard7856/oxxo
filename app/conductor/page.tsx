@@ -96,7 +96,7 @@ export default async function ConductorPage() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     ¡Bienvenido, Conductor!
                 </h2>
-                <p className="text-gray-800 mb-6">
+                <p className="text-gray-600 mb-6">
                     Crea un nuevo reporte de entrega siguiendo los pasos del asistente
                 </p>
                 <Link
@@ -130,7 +130,7 @@ export default async function ConductorPage() {
                             Proceso Guiado
                         </h3>
                     </div>
-                    <p className="text-gray-800 text-sm">
+                    <p className="text-gray-600 text-sm">
                         Sigue un proceso paso a paso para crear tus reportes de entrega con
                         validación automática.
                     </p>
@@ -163,7 +163,7 @@ export default async function ConductorPage() {
                             Captura de Evidencias
                         </h3>
                     </div>
-                    <p className="text-gray-800 text-sm">
+                    <p className="text-gray-600 text-sm">
                         Toma fotos de tickets y evidencias directamente desde tu dispositivo
                         con extracción automática de datos.
                     </p>

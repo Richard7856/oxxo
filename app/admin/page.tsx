@@ -82,12 +82,12 @@ export default function AdminPage() {
                         <p className="text-gray-600 text-sm mb-4">
                             Crear y gestionar usuarios del sistema con roles específicos.
                         </p>
-                        <Link
-                            href="/admin/usuarios"
-                            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors text-center block"
+                        <button
+                            disabled
+                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
                         >
-                            Gestionar Usuarios
-                        </Link>
+                            Próximamente
+                        </button>
                     </div>
 
                     <div className="bg-white rounded-lg shadow p-6">

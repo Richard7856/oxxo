@@ -44,32 +44,18 @@ export async function signup(formData: FormData) {
         return { error: error.message };
     }
 
-    // The trigger handle_new_user() will automatically create the profile
-    // But we verify it was created as a fallback (in case trigger fails)
+    // Create user profile immediately
     if (authData.user) {
-        // Wait a bit for trigger to execute (trigger is async)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Verify profile was created, if not, create it manually as fallback
-        const { data: existingProfile } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('id', authData.user.id)
-            .maybeSingle();
-        
-        if (!existingProfile) {
-            console.warn('Profile not created by trigger, creating manually...');
-            const { error: profileError } = await supabase.from('user_profiles').insert({
-                id: authData.user.id,
-                email: authData.user.email!,
-                role: 'conductor',
-                display_name: authData.user.email!.split('@')[0],
-            });
+        const { error: profileError } = await supabase.from('user_profiles').insert({
+            id: authData.user.id,
+            email: authData.user.email!,
+            role: 'conductor',
+            display_name: authData.user.email!.split('@')[0],
+        });
 
-            if (profileError) {
-                console.error('Error creating profile (fallback):', profileError);
-                // Still allow signup to proceed - user can be fixed manually
-            }
+        if (profileError) {
+            console.error('Error creating profile:', profileError);
+            // Don't fail signup if profile creation fails
         }
     }
 

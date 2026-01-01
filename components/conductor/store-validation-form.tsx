@@ -37,31 +37,15 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
                 body: JSON.stringify({ codigo_tienda: code }),
             });
 
-            // Parse JSON safely
-            let data;
-            try {
-                const responseText = await response.text();
-                if (!responseText || responseText.trim() === '') {
-                    throw new Error('Respuesta vacía del servidor');
-                }
-                data = JSON.parse(responseText);
-            } catch (parseError: any) {
-                console.error('Error parsing response:', parseError);
-                throw new Error('Error al procesar la respuesta del servidor');
-            }
+            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data?.error || 'Error al validar la tienda');
-            }
-
-            if (!data.store) {
-                throw new Error('Datos de tienda no recibidos');
+                throw new Error(data.error || 'Error al validar la tienda');
             }
 
             setStoreData(data.store);
         } catch (err: any) {
-            console.error('Store validation error:', err);
-            setError(err.message || 'Error al validar la tienda. Por favor intenta nuevamente.');
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -89,8 +73,8 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
                 throw new Error(data.error || 'Error al crear el reporte');
             }
 
-            // Redirect to next step - use replace to avoid back button issues
-            router.replace(`/conductor/nuevo-reporte/${data.reporte_id}`);
+            // Redirect to next step
+            router.push(`/conductor/nuevo-reporte/${data.reporte_id}`);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -231,10 +215,10 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
                         placeholder="Ej: 50CUE"
                         maxLength={5}
                         autoCapitalize="characters"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-lg font-mono uppercase text-gray-900 placeholder-gray-600"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-lg font-mono uppercase text-gray-900 placeholder-gray-500"
                         disabled={loading}
                     />
-                    <p className="mt-2 text-sm text-gray-700">
+                    <p className="mt-2 text-sm text-gray-500">
                         Formato: 2 números + 3 letras (Ej: 50CUE)
                     </p>
                 </div>

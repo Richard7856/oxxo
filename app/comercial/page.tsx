@@ -1,80 +1,8 @@
+import Link from "next/link";
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-
-// Status badges
-function StatusBadge({ status }: { status: string }) {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-        draft: { label: 'Borrador', className: 'bg-gray-100 text-gray-800' },
-        submitted: { label: 'En Proceso', className: 'bg-blue-100 text-blue-800' },
-        resolved_by_driver: { label: 'Resuelto por Conductor', className: 'bg-green-100 text-green-800' },
-        timed_out: { label: 'Tiempo Agotado', className: 'bg-red-100 text-red-800' },
-        completed: { label: 'Completado', className: 'bg-green-100 text-green-800' },
-        archived: { label: 'Archivado', className: 'bg-gray-100 text-gray-800' },
-    };
-
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
-
-    return (
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.className}`}>
-            {config.label}
-        </span>
-    );
-}
-
-// Report card component
-function ReportCard({ report }: { report: any }) {
-    const reportDate = new Date(report.created_at).toLocaleDateString('es-MX', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-
-    return (
-        <Link
-            href={`/comercial/reportes/${report.id}`}
-            className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200 p-4"
-        >
-            <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-gray-900">{report.store_nombre}</h3>
-                        <StatusBadge status={report.status} />
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                        <p>
-                            <span className="font-medium">Conductor:</span> {report.conductor_nombre}
-                        </p>
-                        <p>
-                            <span className="font-medium">Código:</span> {report.store_codigo} |{' '}
-                            <span className="font-medium">Zona:</span> {report.store_zona}
-                        </p>
-                        <p>
-                            <span className="font-medium">Tipo:</span>{' '}
-                            {report.tipo_reporte || 'Sin tipo'}
-                        </p>
-                        <p className="text-gray-500">{reportDate}</p>
-                    </div>
-                </div>
-                <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                    />
-                </svg>
-            </div>
-        </Link>
-    );
-}
+import PWAInstallButton from '@/components/pwa-install-button';
+import PushNotificationManager from '@/components/push-notification-manager';
 
 export default async function ComercialPage() {
     const supabase = await createClient();
@@ -86,174 +14,164 @@ export default async function ComercialPage() {
         redirect('/login');
     }
 
-    // Get user profile to check role and zona
+    // Verificar que el usuario sea comercial
     const { data: profile } = await supabase
         .from('user_profiles')
-        .select('role, zona')
+        .select('role')
         .eq('id', user.id)
         .single();
 
-    if (!profile || profile.role !== 'comercial') {
+    if (profile?.role !== 'comercial') {
         redirect('/');
-    }
-
-    // Si el comercial no tiene zona asignada, redirigir a la pantalla principal
-    if (!profile.zona) {
-        redirect('/');
-    }
-
-    // Get open reports (submitted, draft) for comercial's zona
-    // Note: Zonas pueden tener diferentes formatos (CDMX vs Coyoacan, etc)
-    // Necesitamos hacer un match más flexible usando filtro ILIKE
-    let openReports;
-    
-    if (profile.zona) {
-        // Mapeo de zonas: CDMX puede incluir Coyoacan, etc
-        const zonaMap: Record<string, string[]> = {
-            'CDMX': ['CDMX', 'Coyoacan', 'COYOACAN', 'Coyoacán'],
-            'Pachuca': ['Pachuca', '10PCK PACHUCA', 'PACHUCA', '10PCK'],
-            'Cuernavaca': ['Cuernavaca', 'CUERNAVACA', 'Morelos'],
-        };
-        
-        const zonasToMatch = zonaMap[profile.zona] || [profile.zona];
-        
-        // Buscar usando múltiples condiciones OR
-        // Usamos in para buscar en el array de zonas posibles
-        const { data, error } = await supabase
-            .from('reportes')
-            .select('*')
-            .in('status', ['draft', 'submitted'])
-            .in('store_zona', zonasToMatch)
-            .order('created_at', { ascending: false });
-        
-        openReports = data;
-        
-        if (error) {
-            console.error('Error fetching open reports:', error);
-            openReports = [];
-        }
-    } else {
-        // Si no tiene zona, mostrar todos
-        const { data, error } = await supabase
-            .from('reportes')
-            .select('*')
-            .in('status', ['draft', 'submitted'])
-            .order('created_at', { ascending: false });
-        
-        openReports = data;
-        
-        if (error) {
-            console.error('Error fetching open reports:', error);
-            openReports = [];
-        }
-    }
-
-    // Get closed reports (completed, resolved_by_driver, timed_out, archived) for comercial's zona
-    let closedReports;
-    
-    if (profile.zona) {
-        // Mapeo de zonas: CDMX puede incluir Coyoacan, etc
-        const zonaMap: Record<string, string[]> = {
-            'CDMX': ['CDMX', 'Coyoacan', 'COYOACAN', 'Coyoacán'],
-            'Pachuca': ['Pachuca', '10PCK PACHUCA', 'PACHUCA', '10PCK'],
-            'Cuernavaca': ['Cuernavaca', 'CUERNAVACA', 'Morelos'],
-        };
-        
-        const zonasToMatch = zonaMap[profile.zona] || [profile.zona];
-        
-        // Buscar usando múltiples condiciones OR
-        const { data, error } = await supabase
-            .from('reportes')
-            .select('*')
-            .in('status', ['completed', 'resolved_by_driver', 'timed_out', 'archived'])
-            .in('store_zona', zonasToMatch)
-            .order('created_at', { ascending: false })
-            .limit(50);
-        
-        closedReports = data;
-        
-        if (error) {
-            console.error('Error fetching closed reports:', error);
-            closedReports = [];
-        }
-    } else {
-        // Si no tiene zona, mostrar todos
-        const { data, error } = await supabase
-            .from('reportes')
-            .select('*')
-            .in('status', ['completed', 'resolved_by_driver', 'timed_out', 'archived'])
-            .order('created_at', { ascending: false })
-            .limit(50);
-        
-        closedReports = data;
-        
-        if (error) {
-            console.error('Error fetching closed reports:', error);
-            closedReports = [];
-        }
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="bg-white border-b">
-                <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="min-h-screen bg-gray-50 p-8">
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Panel de Comercial</h1>
-                            <p className="text-gray-600 mt-1">
-                                {profile.zona ? `Zona: ${profile.zona}` : 'Todas las zonas'}
-                            </p>
+                            <p className="text-gray-600 mt-2">Monitorea reportes de tu zona</p>
                         </div>
                         <Link
                             href="/"
-                            className="text-gray-600 hover:text-gray-900 transition-colors"
+                            className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors"
                         >
                             ← Volver al inicio
                         </Link>
                     </div>
                 </div>
-            </div>
 
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                {/* Open Reports Section */}
-                <section className="mb-12">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-2xl font-semibold text-gray-900">
-                            Tickets Abiertos ({openReports?.length || 0})
-                        </h2>
+                {/* PWA and Notifications */}
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <PWAInstallButton />
+                    <PushNotificationManager userId={user.id} />
                 </div>
 
-                    {openReports && openReports.length > 0 ? (
-                        <div className="grid gap-4">
-                            {openReports.map((report) => (
-                                <ReportCard key={report.id} report={report} />
-                            ))}
+                {/* Status Card */}
+                <div className="bg-green-50 border-l-4 border-green-400 p-6 mb-6">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg
+                                className="h-6 w-6 text-green-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
                         </div>
-                    ) : (
-                        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                            <p className="text-gray-600">No hay tickets abiertos en este momento</p>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-medium text-green-800">
+                                Notificaciones Push Activadas
+                            </h3>
+                            <div className="mt-2 text-sm text-green-700">
+                                <p>
+                                    Ahora puedes recibir notificaciones cuando los conductores envíen mensajes en el chat.
+                                </p>
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                    <li>Instala la aplicación como PWA para mejor experiencia</li>
+                                    <li>Activa las notificaciones push arriba</li>
+                                    <li>Recibirás alertas cuando haya nuevos mensajes</li>
+                                </ul>
+                            </div>
                         </div>
-                    )}
-                </section>
+                    </div>
+                </div>
 
-                {/* Closed Reports Section */}
-                <section>
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                        Historial ({closedReports?.length || 0})
-                    </h2>
+                {/* Feature Cards */}
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center mb-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg
+                                    className="w-6 h-6 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                    />
+                                </svg>
+                            </div>
+                            <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                                Reportes Activos
+                            </h3>
+                        </div>
+                        <p className="text-gray-600 text-sm mb-4">
+                            Lista de reportes pendientes de resolución en tu zona geográfica.
+                        </p>
+                        <button
+                            disabled
+                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
+                        >
+                            Próximamente
+                        </button>
+                    </div>
 
-                    {closedReports && closedReports.length > 0 ? (
-                        <div className="grid gap-4">
-                            {closedReports.map((report) => (
-                                <ReportCard key={report.id} report={report} />
-                            ))}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center mb-4">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <svg
+                                    className="w-6 h-6 text-green-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                            </div>
+                            <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                                Historial
+                            </h3>
                         </div>
-                    ) : (
-                        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                            <p className="text-gray-600">No hay tickets cerrados</p>
-                        </div>
-                    )}
-                </section>
+                        <p className="text-gray-600 text-sm mb-4">
+                            Consulta reportes resueltos y exporta datos para análisis.
+                        </p>
+                        <button
+                            disabled
+                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
+                        >
+                            Próximamente
+                        </button>
+                    </div>
+                </div>
+
+                {/* RLS Info */}
+                <div className="mt-6 bg-blue-50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-blue-900 mb-3">
+                        Seguridad Row Level Security (RLS)
+                    </h3>
+                    <div className="text-sm text-blue-800 space-y-2">
+                        <p>
+                            <strong>✅ Implementado:</strong> Los comerciales solo pueden ver reportes
+                            de su zona asignada.
+                        </p>
+                        <p className="mt-2">
+                            <strong>Política de acceso:</strong>
+                        </p>
+                        <code className="block bg-blue-100 p-3 rounded mt-2 text-xs overflow-x-auto">
+                            WHERE EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role
+                            = 'comercial' AND zona = reportes.store_zona)
+                        </code>
+                    </div>
+                </div>
             </div>
         </div>
     );

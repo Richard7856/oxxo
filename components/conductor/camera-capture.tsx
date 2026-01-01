@@ -30,12 +30,11 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
             // Stop any existing stream first
             stopCamera();
             setLoading(true);
-            setError(null);
-
-            // Check if mediaDevices API is available
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error('La API de cámara no está disponible. Asegúrate de usar HTTPS o localhost.');
-            }
+            // Try environment first, fall back to any if needed? 
+            // Actually 'facingMode: environment' is usually enough hint.
+            // But for desktop debug (where user might be strictly using 'user' cam), 
+            // sometimes explicit 'environment' fails if not available.
+            // Let's try a more generic approach or detailed constraints.
 
             const constraints: MediaStreamConstraints = {
                 video: {
@@ -52,14 +51,10 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
             } catch (envError) {
                 console.warn('Environment camera not found, trying fallback...', envError);
                 // Fallback to any video device (e.g. laptop webcam)
-                try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({
-                        video: true,
-                        audio: false
-                    });
-                } catch (fallbackError) {
-                    throw new Error('No se pudo acceder a ninguna cámara. Verifica los permisos del navegador.');
-                }
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
             }
 
             streamRef.current = mediaStream;
@@ -70,8 +65,9 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
             setLoading(false);
         } catch (err: any) {
             console.error('Error accessing camera:', err);
-            const errorMessage = err.message || 'No se pudo acceder a la cámara. Verifica permisos y que estés en HTTPS o localhost.';
-            setError(errorMessage);
+            setError(
+                'No se pudo acceder a la cámara. Verifica permisos.'
+            );
             setLoading(false);
         }
     }, [stopCamera]);
