@@ -56,14 +56,18 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
         setError(null);
 
         try {
-            // Create reporte
+            // Create reporte con los datos de la tienda directamente
             const response = await fetch('/api/reportes/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    store_id: storeData.id,
                     user_id: userId,
-                    conductor_nombre: 'Conductor', // We'll get this from profile later
+                    store_data: {
+                        codigo_tienda: storeData.codigo_tienda,
+                        nombre: storeData.nombre,
+                        zona: storeData.zona,
+                        direccion: storeData.direccion,
+                    },
                 }),
             });
 

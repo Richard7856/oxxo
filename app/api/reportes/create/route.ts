@@ -3,11 +3,18 @@ import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
     try {
-        const { store_id, user_id, conductor_nombre } = await request.json();
+        const { user_id, store_data } = await request.json();
 
-        if (!store_id || !user_id) {
+        if (!user_id || !store_data) {
             return Response.json(
-                { error: 'store_id y user_id son requeridos' },
+                { error: 'user_id y store_data son requeridos' },
+                { status: 400 }
+            );
+        }
+
+        if (!store_data.codigo_tienda || !store_data.nombre || !store_data.zona) {
+            return Response.json(
+                { error: 'store_data debe contener codigo_tienda, nombre y zona' },
                 { status: 400 }
             );
         }
@@ -17,19 +24,28 @@ export async function POST(request: NextRequest) {
         // Verify user exists and get their profile
         const { data: profile } = await supabase
             .from('user_profiles')
-            .select('display_name')
+            .select('display_name, full_name')
             .eq('id', user_id)
             .single();
 
-        const finalConductorNombre = conductor_nombre || profile?.display_name || 'Conductor';
+        const conductorNombre = profile?.full_name || profile?.display_name || 'Conductor';
 
-        // Call atomic function to create reporte
-        const { data, error } = await supabase.rpc('create_reporte_atomic', {
-            p_user_id: user_id,
-            p_store_id: store_id,
-            p_tipo_reporte: 'rechazo_completo', // Default, will be updated in next step
-            p_conductor_nombre: finalConductorNombre,
-        });
+        // Crear reporte directamente con los datos de la tienda
+        // No necesitamos store_id, solo guardamos los datos denormalizados
+        const { data: reporte, error } = await supabase
+            .from('reportes')
+            .insert({
+                user_id: user_id,
+                store_id: null, // Ya no se usa, los datos están denormalizados
+                store_codigo: store_data.codigo_tienda,
+                store_nombre: store_data.nombre,
+                store_zona: store_data.zona,
+                conductor_nombre: conductorNombre,
+                status: 'draft',
+                tipo_reporte: null, // Se seleccionará en el siguiente paso
+            })
+            .select('id')
+            .single();
 
         if (error) {
             console.error('Error creating reporte:', error);
@@ -39,7 +55,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        return Response.json({ reporte_id: data });
+        return Response.json({ reporte_id: reporte.id });
     } catch (error: any) {
         console.error('Create reporte error:', error);
         return Response.json(

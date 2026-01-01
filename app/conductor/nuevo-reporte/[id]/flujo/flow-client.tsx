@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import EvidenceUpload from '@/components/conductor/evidence-upload';
+import DoubleEvidenceUpload from '@/components/conductor/double-evidence-upload';
 import ActionStep from '@/components/conductor/action-step';
 import IncidentCart from '@/components/conductor/incident-cart';
 import { uploadEvidence, updateCurrentStep } from '@/app/conductor/actions';
@@ -51,12 +52,21 @@ export default function FlowClient({
 
         if (currentStep === '4a' || currentStep === 'arrival_exhibit') {
             return (
-                <EvidenceUpload
+                <DoubleEvidenceUpload
                     title="4. Foto del Exhibidor"
-                    description="Toma una foto del exhibidor a tu llegada"
+                    description="Toma fotos del exhibidor a tu llegada"
                     stepIndicator="Paso 1 de 8"
-                    initialImage={initialEvidence['arrival_exhibit']}
-                    onImageSelected={(file) => handleUpload('arrival_exhibit', file)}
+                    firstLabel="Primera foto"
+                    secondLabel="Segunda foto"
+                    secondOptional={true}
+                    initialImages={{
+                        first: initialEvidence['arrival_exhibit'] || null,
+                        second: initialEvidence['arrival_exhibit_2'] || null,
+                    }}
+                    onImageSelected={async (key, file) => {
+                        const evidenceKey = key === 'first' ? 'arrival_exhibit' : 'arrival_exhibit_2';
+                        await handleUpload(evidenceKey, file);
+                    }}
                     onContinue={() => goTo('incident_check')}
                 />
             );
@@ -81,12 +91,21 @@ export default function FlowClient({
 
         if (currentStep === '6' || currentStep === 'product_arranged') {
             return (
-                <EvidenceUpload
+                <DoubleEvidenceUpload
                     title="6. Producto Acomodado"
-                    description="Foto del producto ya acomodado en el exhibidor"
+                    description="Fotos del producto ya acomodado en el exhibidor"
                     stepIndicator="Paso 3 de 8"
-                    initialImage={initialEvidence['product_arranged']}
-                    onImageSelected={(file) => handleUpload('product_arranged', file)}
+                    firstLabel="Primera foto"
+                    secondLabel="Segunda foto"
+                    secondOptional={true}
+                    initialImages={{
+                        first: initialEvidence['product_arranged'] || null,
+                        second: initialEvidence['product_arranged_2'] || null,
+                    }}
+                    onImageSelected={async (key, file) => {
+                        const evidenceKey = key === 'first' ? 'product_arranged' : 'product_arranged_2';
+                        await handleUpload(evidenceKey, file);
+                    }}
                     onContinue={() => goTo('waste_check')}
                 />
             );

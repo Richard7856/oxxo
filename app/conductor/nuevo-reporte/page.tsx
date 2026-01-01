@@ -17,7 +17,7 @@ export default async function NuevoReportePage() {
     // Check if user already has active reporte
     const { data: activeReporte } = await supabase
         .from('reportes')
-        .select('id, status, created_at, stores(nombre)')
+        .select('id, status, created_at, store_nombre')
         .eq('user_id', user.id)
         .in('status', ['draft', 'submitted'])
         .order('created_at', { ascending: false })
@@ -35,7 +35,7 @@ export default async function NuevoReportePage() {
                                 Tienes un reporte activo
                             </h3>
                             <p className="text-sm text-yellow-700 mb-3">
-                                {activeReporte.stores?.nombre ? `Tienda: ${activeReporte.stores.nombre}` : 'Reporte en progreso'}
+                                {activeReporte.store_nombre ? `Tienda: ${activeReporte.store_nombre}` : 'Reporte en progreso'}
                                 {' - '}
                                 Estado: {activeReporte.status === 'draft' ? 'Borrador' : 'Enviado'}
                             </p>

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import CancelReportButton from '@/components/conductor/cancel-report-button';
 
 export default async function ConductorPage() {
     const supabase = await createClient();
@@ -36,7 +37,7 @@ export default async function ConductorPage() {
     // Check for active reporte
     const { data: activeReporte } = await supabase
         .from('reportes')
-        .select('*, stores(nombre)')
+        .select('*')
         .eq('user_id', user.id)
         .in('status', ['draft', 'submitted'])
         .order('created_at', { ascending: false })
@@ -57,7 +58,7 @@ export default async function ConductorPage() {
                             </div>
                             <div className="ml-3">
                                 <p className="text-sm text-yellow-700">
-                                    Tienes un reporte pendiente en <strong>{activeReporte.stores?.nombre || 'Tienda'}</strong>
+                                    Tienes un reporte pendiente en <strong>{activeReporte.store_nombre || 'Tienda'}</strong>
                                 </p>
                                 <p className="text-xs text-yellow-600 mt-1">
                                     Creado: {new Date(activeReporte.created_at).toLocaleString()}
@@ -71,6 +72,7 @@ export default async function ConductorPage() {
                             >
                                 Continuar
                             </Link>
+                            <CancelReportButton reportId={activeReporte.id} />
                         </div>
                     </div>
                 </div>

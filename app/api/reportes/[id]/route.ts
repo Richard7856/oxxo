@@ -11,7 +11,7 @@ export async function GET(
 
         const { data: reporte, error } = await supabase
             .from('reportes')
-            .select('*, stores(*), user_profiles(*)')
+            .select('*, user_profiles(*)')
             .eq('id', id)
             .single();
 

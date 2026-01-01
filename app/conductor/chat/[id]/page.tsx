@@ -21,7 +21,7 @@ export default async function ChatPage({
     // Get report info
     const { data: report } = await supabase
         .from('reportes')
-        .select('*, stores(nombre)')
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -43,7 +43,7 @@ export default async function ChatPage({
                     <Link href="/conductor" className="text-gray-600">
                         ← Volver al Inicio
                     </Link>
-                    <h1 className="font-semibold text-lg">Soporte ({report.stores?.nombre})</h1>
+                    <h1 className="font-semibold text-lg">Soporte ({report.store_nombre})</h1>
                     <div className="w-8"></div> {/* Spacer */}
                 </div>
             </header>
@@ -53,6 +53,7 @@ export default async function ChatPage({
                     reportId={id}
                     userId={user.id}
                     reportCreatedAt={report.created_at}
+                    timeoutAt={report.timeout_at}
                     initialMessages={messages || []}
                 />
             </main>

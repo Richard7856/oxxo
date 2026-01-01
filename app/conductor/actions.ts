@@ -113,6 +113,114 @@ export async function uploadEvidence(
     return { success: true, url: publicUrl };
 }
 
+export async function updateCurrentStep(reportId: string, step: string) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    const { error } = await supabase
+        .from('reportes')
+        .update({
+            current_step: step,
+        })
+        .eq('id', reportId)
+        .eq('user_id', user.id);
+
+    if (error) {
+        console.error('Error updating current step:', error);
+        return { error: 'Error al actualizar el paso' };
+    }
+
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true };
+}
+
+// Nueva función para inicializar el chat y enviar notificación
+export async function initializeChat(reportId: string) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Obtener el reporte
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('*')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    // Si el reporte está en draft o no tiene timeout_at, inicializar el timer
+    const now = new Date();
+    const timeoutAt = new Date(now.getTime() + 20 * 60 * 1000); // 20 minutos desde ahora
+
+    const updateData: any = {};
+    
+    // Si está en draft, cambiar a submitted y establecer timestamps
+    if (report.status === 'draft') {
+        updateData.status = 'submitted';
+        updateData.submitted_at = now.toISOString();
+        updateData.timeout_at = timeoutAt.toISOString();
+    } else if (!report.timeout_at || new Date(report.timeout_at) < now) {
+        // Si no tiene timeout_at o ya expiró, establecer uno nuevo
+        updateData.timeout_at = timeoutAt.toISOString();
+        if (!report.submitted_at) {
+            updateData.submitted_at = now.toISOString();
+        }
+    }
+
+    // Actualizar el reporte si hay cambios
+    if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+            .from('reportes')
+            .update(updateData)
+            .eq('id', reportId)
+            .eq('user_id', user.id);
+
+        if (updateError) {
+            console.error('Error initializing chat:', updateError);
+            return { error: 'Error al inicializar el chat' };
+        }
+    }
+
+    // Enviar notificación push al comercial
+    try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+        
+        await fetch(`${baseUrl}/api/push/send-chat-notification`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reportId,
+                action: 'chat_started',
+            }),
+        }).catch((err) => {
+            console.error('Error sending chat notification:', err);
+        });
+    } catch (err) {
+        console.error('Error in chat notification:', err);
+    }
+
+    revalidatePath(`/conductor/chat/${reportId}`);
+    return { 
+        success: true, 
+        timeoutAt: updateData.timeout_at || report.timeout_at,
+        submittedAt: updateData.submitted_at || report.submitted_at 
+    };
+}
+
 export async function sendMessage(reportId: string, text: string) {
     const supabase = await createClient();
     const {
@@ -172,7 +280,7 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
     // Get report details for context
     const { data: report } = await supabase
         .from('reportes')
-        .select('*, stores(*), user_profiles(*)')
+        .select('*, user_profiles(*)')
         .eq('id', reportId)
         .single();
 
@@ -181,9 +289,9 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
     const payload = {
         reportId,
         reportType: report.tipo_reporte,
-        store: report.stores?.nombre,
-        storeId: report.store_id,
-        conductor: report.user_profiles?.full_name,
+        store: report.store_nombre,
+        storeCodigo: report.store_codigo,
+        conductor: report.user_profiles?.full_name || report.conductor_nombre,
         conductorId: user.id,
         incidents,
         timestamp: new Date().toISOString(),
@@ -221,10 +329,9 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
         console.error('Error saving incidents to DB:', updateError);
     }
 
-    // Create a system message in chat to indicate report was sent? 
-    // Or just redirect.
-
-    redirect(`/conductor/chat/${reportId}`);
+    // Retornar éxito en lugar de redirect para evitar el error en el cliente
+    revalidatePath(`/conductor/chat/${reportId}`);
+    return { success: true, chatUrl: `/conductor/chat/${reportId}` };
 }
 
 export async function resolveReport(reportId: string) {
@@ -235,75 +342,62 @@ export async function resolveReport(reportId: string) {
 
     if (!user) return { error: 'No autorizado' };
 
-    // Verificar que el reporte pertenece al usuario
-    const { data: report } = await supabase
+    // Verificar que el reporte pertenece al usuario y obtener su estado y tipo
+    const { data: report, error: fetchError } = await supabase
         .from('reportes')
         .select('status, tipo_reporte, evidence')
         .eq('id', reportId)
         .eq('user_id', user.id)
         .single();
 
-    if (!report) {
-        return { error: 'Reporte no encontrado' };
+    if (fetchError || !report) {
+        console.error('Error fetching report for resolution:', fetchError);
+        return { error: 'Reporte no encontrado o no autorizado' };
     }
 
-    // Determinar el siguiente paso basado en el tipo de reporte y evidencia
-    let nextStep = '4a'; // Default para entrega
-    if (report.tipo_reporte === 'tienda_cerrada') {
-        nextStep = '4b';
-    } else if (report.tipo_reporte === 'bascula') {
-        nextStep = '4c';
-    } else if (report.tipo_reporte === 'entrega') {
-        // Para entrega, verificar qué evidencia ya se tiene para determinar el siguiente paso
-        const evidence = (report.evidence as Record<string, string>) || {};
-        if (evidence['arrival_exhibit']) {
-            nextStep = 'incident_check';
-        } else {
-            nextStep = '4a';
-        }
+    if (report.status === 'completed' || report.status === 'archived') {
+        return { error: 'El reporte ya está completado o archivado.' };
     }
 
-    // Actualizar el estado del reporte y el paso actual
-    const { error } = await supabase
+    // Actualizar el estado del reporte
+    const { error: updateStatusError } = await supabase
         .from('reportes')
         .update({
             status: 'resolved_by_driver',
             resolved_at: new Date().toISOString(),
-            current_step: nextStep, // Actualizar el paso para continuar desde donde corresponde
         })
         .eq('id', reportId)
         .eq('user_id', user.id);
 
-    if (error) {
-        console.error('Error resolving report:', error);
+    if (updateStatusError) {
+        console.error('Error resolving report status:', updateStatusError);
         return { error: 'Error al resolver reporte' };
     }
 
-    // Redirigir al flujo del reporte para continuar con los siguientes pasos
-    redirect(`/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}`);
-}
+    // Determinar el siguiente paso basado en el tipo de reporte y la evidencia
+    let nextStep = 'finish'; // Default to finish
 
-export async function updateCurrentStep(reportId: string, step: string) {
-    const supabase = await createClient();
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    if (report.tipo_reporte === 'entrega') {
+        const evidence = report.evidence as Record<string, string> || {};
+        if (!evidence['ticket']) {
+            nextStep = 'ticket';
+        } else if (!evidence['return_ticket']) {
+            nextStep = 'return_check';
+        }
+    } else if (report.tipo_reporte === 'tienda_cerrada') {
+        nextStep = 'finish'; // Tienda cerrada solo tiene un paso de evidencia y luego termina
+    } else if (report.tipo_reporte === 'bascula') {
+        nextStep = 'finish'; // Báscula solo tiene un paso de evidencia y luego termina
+    }
 
-    if (!user) return { error: 'No autorizado' };
-
-    const { error } = await supabase
+    // Guardar el siguiente paso en la base de datos
+    await supabase
         .from('reportes')
-        .update({
-            current_step: step,
-        })
+        .update({ current_step: nextStep })
         .eq('id', reportId)
         .eq('user_id', user.id);
 
-    if (error) {
-        console.error('Error updating current step:', error);
-        return { error: 'Error al actualizar el paso' };
-    }
-
+    // Redirigir al flujo del reporte para continuar con los siguientes pasos
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
-    return { success: true };
+    redirect(`/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}`);
 }

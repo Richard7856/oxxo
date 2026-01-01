@@ -21,7 +21,7 @@ export default async function ReporteTipoPage({
     // Get reporte
     const { data: reporte } = await supabase
         .from('reportes')
-        .select('*, stores(*)')
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -73,10 +73,10 @@ export default async function ReporteTipoPage({
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-lg font-semibold text-gray-900">
-                            {reporte.stores.nombre}
+                            {reporte.store_nombre}
                         </p>
                         <p className="text-sm text-gray-600">
-                            Código: {reporte.stores.codigo_tienda} | Zona: {reporte.stores.zona}
+                            Código: {reporte.store_codigo} | Zona: {reporte.store_zona}
                         </p>
                     </div>
                     <CancelReportButton reportId={id} />

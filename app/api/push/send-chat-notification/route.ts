@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import webpush from 'web-push';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Configurar VAPID keys (deben estar en variables de entorno)
+// Configurar VAPID keys
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
 const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@oxxo.com';
@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { reportId, messageText, sender } = body;
+        const { reportId, action } = body;
 
-        if (!reportId || !messageText) {
+        if (!reportId || action !== 'chat_started') {
             return NextResponse.json(
                 { error: 'Datos incompletos' },
                 { status: 400 }
@@ -43,10 +43,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Reporte no encontrado' }, { status: 404 });
         }
 
-        // Solo enviar notificaciones si el mensaje es del conductor (user)
-        // Los comerciales deben recibir notificaciones cuando el conductor envía mensajes
-        if (sender !== 'user') {
-            return NextResponse.json({ success: true, skipped: true });
+        // Calcular tiempo restante
+        const now = new Date();
+        const timeoutAt = report.timeout_at ? new Date(report.timeout_at) : null;
+        let timeRemaining = '';
+        
+        if (timeoutAt && timeoutAt > now) {
+            const minutes = Math.floor((timeoutAt.getTime() - now.getTime()) / (1000 * 60));
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            
+            if (hours > 0) {
+                timeRemaining = `${hours}h ${mins}m`;
+            } else {
+                timeRemaining = `${mins}m`;
+            }
+        } else {
+            timeRemaining = '20m'; // Default si no hay timeout_at
         }
 
         // Obtener comerciales de la misma zona
@@ -71,11 +84,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, noSubscriptions: true });
         }
 
-        // Preparar payload de notificación
+        // Preparar payload de notificación con tiempo restante
         const storeName = report.store_nombre || 'Tienda';
         const notificationPayload = JSON.stringify({
-            title: `Nuevo mensaje - ${storeName}`,
-            body: messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText,
+            title: `🚨 Atención requerida - ${storeName}`,
+            body: `Conductor necesita ayuda. Tiempo restante: ${timeRemaining}`,
             icon: '/icon-192.png',
             badge: '/icon-192.png',
             tag: `report-${reportId}`,
@@ -84,6 +97,7 @@ export async function POST(request: NextRequest) {
                 reportId,
             },
             requireInteraction: true,
+            urgency: 'high',
         });
 
         // Enviar notificaciones a todas las suscripciones
@@ -122,9 +136,10 @@ export async function POST(request: NextRequest) {
             sent: successful,
             failed,
             total: subscriptions.length,
+            timeRemaining,
         });
     } catch (error) {
-        console.error('Error sending push notification:', error);
+        console.error('Error sending chat notification:', error);
         return NextResponse.json(
             { error: 'Error interno del servidor' },
             { status: 500 }

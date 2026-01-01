@@ -68,35 +68,15 @@ export async function POST(request: NextRequest) {
 
         console.log('Store found:', storeData);
 
-        // Upsert store in database
-        const supabase = await createClient();
-
-        const { data: store, error } = await supabase
-            .from('stores')
-            .upsert(
-                {
-                    codigo_tienda: storeData.Codigo,
-                    nombre: storeData.Nombre,
-                    zona: storeData.Zona,
-                    direccion: storeData.Plaza, // Using Plaza as address
-                },
-                {
-                    onConflict: 'codigo_tienda',
-                }
-            )
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error upserting store:', error);
-            return Response.json(
-                { error: 'Error al guardar la tienda en la base de datos' },
-                { status: 500 }
-            );
-        }
-
+        // Solo devolver los datos de la tienda, sin guardar en base de datos
+        // Los datos se guardarán directamente en el reporte
         return Response.json({
-            store,
+            store: {
+                codigo_tienda: storeData.Codigo,
+                nombre: storeData.Nombre,
+                zona: storeData.Zona,
+                direccion: storeData.Plaza, // Using Plaza as address
+            },
             details: {
                 responsable_comercial: storeData['Responsable\n comercial'],
                 celular: storeData.Celular,

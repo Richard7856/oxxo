@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { sendMessage, resolveReport } from '@/app/conductor/actions';
+import { sendMessage, resolveReport, initializeChat } from '@/app/conductor/actions';
 import { MessageSender } from '@/lib/types/database.types';
 
 interface Message {
@@ -18,17 +18,23 @@ interface ChatInterfaceProps {
     userId: string; // Added userId prop
     reportCreatedAt: string; // New prop for persistent timer
     initialMessages: Message[];
+    timeoutAt?: string | null; // Timeout timestamp
 }
 
-function usePersistentTimer(createdAt: string, durationMinutes: number) {
+function usePersistentTimer(timeoutAt: string | null | undefined) {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
+        if (!timeoutAt) {
+            setIsExpired(false);
+            setTimeLeft(0);
+            return;
+        }
+
         const calculateTimeLeft = () => {
-            const start = new Date(createdAt).getTime();
+            const end = new Date(timeoutAt).getTime();
             const now = new Date().getTime();
-            const end = start + durationMinutes * 60 * 1000;
             const remaining = Math.max(0, Math.floor((end - now) / 1000));
 
             setTimeLeft(remaining);
@@ -39,7 +45,7 @@ function usePersistentTimer(createdAt: string, durationMinutes: number) {
 
         const interval = setInterval(calculateTimeLeft, 1000);
         return () => clearInterval(interval);
-    }, [createdAt, durationMinutes]);
+    }, [timeoutAt]);
 
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -48,15 +54,32 @@ function usePersistentTimer(createdAt: string, durationMinutes: number) {
     return { formatted, isExpired, timeLeft };
 }
 
-export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages }: ChatInterfaceProps) {
+export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages, timeoutAt: initialTimeoutAt }: ChatInterfaceProps) {
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
     const [resolving, setResolving] = useState(false);
+    const [timeoutAt, setTimeoutAt] = useState<string | null>(initialTimeoutAt || null);
+    const [initialized, setInitialized] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const supabase = createClient();
 
-    const { formatted: timeFormatted, isExpired } = usePersistentTimer(reportCreatedAt, 20);
+    // Inicializar el chat cuando se monta el componente
+    useEffect(() => {
+        if (!initialized) {
+            initializeChat(reportId).then((result) => {
+                if (result?.success && result?.timeoutAt) {
+                    setTimeoutAt(result.timeoutAt);
+                }
+                setInitialized(true);
+            }).catch((error) => {
+                console.error('Error initializing chat:', error);
+                setInitialized(true);
+            });
+        }
+    }, [reportId, initialized]);
+
+    const { formatted: timeFormatted, isExpired } = usePersistentTimer(timeoutAt);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
