@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import PWAInstallButton from '@/components/pwa-install-button';
 import PushNotificationManager from '@/components/push-notification-manager';
 import ActiveReportsList from '@/components/comercial/active-reports-list';
+import CompletedReportsList from '@/components/comercial/completed-reports-list';
 
 export default async function ComercialPage() {
     const supabase = await createClient();
@@ -134,18 +135,13 @@ export default async function ComercialPage() {
                                 </svg>
                             </div>
                             <h3 className="ml-3 text-lg font-semibold text-gray-900">
-                                Historial
+                                Reportes Cerrados
                             </h3>
                         </div>
                         <p className="text-gray-600 text-sm mb-4">
-                            Consulta reportes resueltos y exporta datos para análisis.
+                            Consulta reportes resueltos y completados de tu zona.
                         </p>
-                        <button
-                            disabled
-                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
-                        >
-                            Próximamente
-                        </button>
+                        <CompletedReportsList userId={user.id} />
                     </div>
                 </div>
 

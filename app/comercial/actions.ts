@@ -1,0 +1,63 @@
+'use server';
+
+import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+
+export async function closeReport(reportId: string) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el usuario sea comercial
+    const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, zona')
+        .eq('id', user.id)
+        .single();
+
+    if (profile?.role !== 'comercial') {
+        return { error: 'Solo los comerciales pueden cerrar reportes' };
+    }
+
+    // Verificar que el reporte pertenece a la zona del comercial
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('status, store_zona')
+        .eq('id', reportId)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    if (report.store_zona !== profile.zona) {
+        return { error: 'No tienes permiso para cerrar este reporte' };
+    }
+
+    // Solo se pueden cerrar reportes que estén en submitted o resolved_by_driver
+    if (report.status !== 'submitted' && report.status !== 'resolved_by_driver') {
+        return { error: 'Solo se pueden cerrar reportes en estado "Enviado" o "Resuelto por Conductor"' };
+    }
+
+    // Actualizar el estado a completed
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({
+            status: 'completed',
+            resolved_at: new Date().toISOString(),
+        })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error closing report:', updateError);
+        return { error: 'Error al cerrar el reporte' };
+    }
+
+    revalidatePath(`/comercial/reporte/${reportId}`);
+    revalidatePath('/comercial');
+    return { success: true };
+}
+

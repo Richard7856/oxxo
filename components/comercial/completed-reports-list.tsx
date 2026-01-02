@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 
-interface ActiveReportsListProps {
+interface CompletedReportsListProps {
     userId: string;
 }
 
-export default async function ActiveReportsList({ userId }: ActiveReportsListProps) {
+export default async function CompletedReportsList({ userId }: CompletedReportsListProps) {
     const supabase = await createClient();
     
     // Obtener la zona del comercial
@@ -24,29 +24,27 @@ export default async function ActiveReportsList({ userId }: ActiveReportsListPro
         );
     }
 
-    // Obtener reportes activos de la zona del comercial
+    // Obtener reportes cerrados/completados de la zona del comercial
     // Nota: RLS debería filtrar automáticamente, pero también filtramos explícitamente por zona
     const { data: reportes, error } = await supabase
         .from('reportes')
         .select('*')
         .eq('store_zona', profile.zona)
-        .in('status', ['draft', 'submitted', 'resolved_by_driver'])
+        .in('status', ['completed', 'timed_out', 'archived'])
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
     // Debug: mostrar información útil
     if (error) {
-        console.error('Error fetching reports:', error);
+        console.error('Error fetching completed reports:', error);
         console.error('Commercial zona:', profile.zona);
     }
 
     if (error) {
-        console.error('Error fetching reports:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('Error fetching completed reports:', error);
         return (
             <div className="text-sm text-red-600">
                 <p>Error al cargar los reportes. Intenta recargar la página.</p>
-                <p className="text-xs mt-1">Error: {error.message || 'Error desconocido'}</p>
             </div>
         );
     }
@@ -73,7 +71,7 @@ export default async function ActiveReportsList({ userId }: ActiveReportsListPro
     if (!reportes || reportes.length === 0) {
         return (
             <div className="text-sm text-gray-600">
-                <p>No hay reportes activos en tu zona en este momento.</p>
+                <p>No hay reportes cerrados en tu zona.</p>
                 <p className="text-xs mt-2 text-gray-500">
                     Tu zona: <strong>{profile.zona}</strong> | 
                     Buscando reportes con store_zona: <strong>{profile.zona}</strong>
@@ -89,9 +87,9 @@ export default async function ActiveReportsList({ userId }: ActiveReportsListPro
                 const conductorInfoData = conductorInfo[reporte.user_id] || {};
                 const conductorName = conductorInfoData.full_name || conductorInfoData.display_name || reporte.conductor_nombre || 'Conductor';
                 const statusLabels: Record<string, { label: string; color: string }> = {
-                    draft: { label: 'Borrador', color: 'bg-gray-100 text-gray-800' },
-                    submitted: { label: 'Enviado', color: 'bg-blue-100 text-blue-800' },
-                    resolved_by_driver: { label: 'Resuelto por Conductor', color: 'bg-green-100 text-green-800' },
+                    completed: { label: 'Completado', color: 'bg-green-100 text-green-800' },
+                    timed_out: { label: 'Tiempo Agotado', color: 'bg-red-100 text-red-800' },
+                    archived: { label: 'Archivado', color: 'bg-gray-100 text-gray-800' },
                 };
                 const statusInfo = statusLabels[reporte.status] || { label: reporte.status, color: 'bg-gray-100 text-gray-800' };
 
@@ -119,6 +117,12 @@ export default async function ActiveReportsList({ userId }: ActiveReportsListPro
                                         <span className="font-medium">Creado:</span>{' '}
                                         {new Date(reporte.created_at).toLocaleString('es-MX')}
                                     </p>
+                                    {reporte.resolved_at && (
+                                        <p>
+                                            <span className="font-medium">Resuelto:</span>{' '}
+                                            {new Date(reporte.resolved_at).toLocaleString('es-MX')}
+                                        </p>
+                                    )}
                                     {reporte.store_codigo && (
                                         <p>
                                             <span className="font-medium">Código:</span> {reporte.store_codigo}
@@ -127,14 +131,12 @@ export default async function ActiveReportsList({ userId }: ActiveReportsListPro
                                 </div>
                             </div>
                             <div className="ml-4 flex flex-col gap-2">
-                                {(reporte.status === 'submitted' || reporte.status === 'resolved_by_driver') && (
-                                    <Link
-                                        href={`/comercial/chat/${reporte.id}`}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
-                                    >
-                                        Ver Chat
-                                    </Link>
-                                )}
+                                <Link
+                                    href={`/comercial/chat/${reporte.id}`}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
+                                >
+                                    Ver Chat
+                                </Link>
                                 <Link
                                     href={`/comercial/reporte/${reporte.id}`}
                                     className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-center"
