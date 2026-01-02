@@ -11,18 +11,18 @@ export async function closeReport(reportId: string) {
 
     if (!user) return { error: 'No autorizado' };
 
-    // Verificar que el usuario sea comercial
+    // Verificar que el usuario sea comercial o administrador
     const { data: profile } = await supabase
         .from('user_profiles')
         .select('role, zona')
         .eq('id', user.id)
         .single();
 
-    if (profile?.role !== 'comercial') {
-        return { error: 'Solo los comerciales pueden cerrar reportes' };
+    if (profile?.role !== 'comercial' && profile?.role !== 'administrador') {
+        return { error: 'Solo los comerciales y administradores pueden cerrar reportes' };
     }
 
-    // Verificar que el reporte pertenece a la zona del comercial
+    // Verificar que el reporte existe
     const { data: report } = await supabase
         .from('reportes')
         .select('status, store_zona')
@@ -33,7 +33,9 @@ export async function closeReport(reportId: string) {
         return { error: 'Reporte no encontrado' };
     }
 
-    if (report.store_zona !== profile.zona) {
+    // Si es comercial, verificar que el reporte pertenece a su zona
+    // Si es administrador, puede cerrar cualquier reporte
+    if (profile.role === 'comercial' && report.store_zona !== profile.zona) {
         return { error: 'No tienes permiso para cerrar este reporte' };
     }
 
@@ -56,8 +58,14 @@ export async function closeReport(reportId: string) {
         return { error: 'Error al cerrar el reporte' };
     }
 
-    revalidatePath(`/comercial/reporte/${reportId}`);
-    revalidatePath('/comercial');
+    // Revalidar según el rol del usuario
+    if (profile.role === 'administrador') {
+        revalidatePath(`/admin/reporte/${reportId}`);
+        revalidatePath('/admin');
+    } else {
+        revalidatePath(`/comercial/reporte/${reportId}`);
+        revalidatePath('/comercial');
+    }
     return { success: true };
 }
 

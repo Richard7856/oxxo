@@ -1,209 +1,227 @@
 import Link from "next/link";
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import AllReportsList from '@/components/admin/all-reports-list';
+import UsersList from '@/components/admin/users-list';
 
-export default function AdminPage() {
+export default async function AdminPage() {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+        redirect('/login');
+    }
+
+    // Verificar que el usuario sea administrador
+    const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    if (profile?.role !== 'administrador') {
+        redirect('/');
+    }
+
+    // Obtener estadísticas
+    const { count: totalReports } = await supabase
+        .from('reportes')
+        .select('*', { count: 'exact', head: true });
+
+    const { count: activeReports } = await supabase
+        .from('reportes')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['draft', 'submitted', 'resolved_by_driver']);
+
+    const { count: completedReports } = await supabase
+        .from('reportes')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['completed']);
+
+    const { count: totalUsers } = await supabase
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true });
+
+    // Obtener zonas únicas
+    const { data: zonasData } = await supabase
+        .from('reportes')
+        .select('store_zona')
+        .not('store_zona', 'is', null);
+
+    const zonasUnicas = [...new Set(zonasData?.map(r => r.store_zona) || [])];
+
     return (
         <div className="min-h-screen bg-gray-50 p-8">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">
-                                Panel de Administrador
-                            </h1>
-                            <p className="text-gray-600 mt-2">Gestión completa del sistema</p>
+                            <h1 className="text-3xl font-bold text-gray-900">Panel de Administrador</h1>
+                            <p className="text-gray-600 mt-2">Gestión completa del sistema - Acceso a todas las zonas</p>
                         </div>
                         <Link
                             href="/"
-                            className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
                         >
                             ← Volver al inicio
                         </Link>
                     </div>
                 </div>
 
-                {/* Status Card */}
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 mb-6">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
+                {/* Statistics Cards */}
+                <div className="grid md:grid-cols-4 gap-6 mb-6">
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Reportes</p>
+                                <p className="text-3xl font-bold text-gray-900 mt-2">{totalReports || 0}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Reportes Activos</p>
+                                <p className="text-3xl font-bold text-blue-600 mt-2">{activeReports || 0}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Reportes Completados</p>
+                                <p className="text-3xl font-bold text-green-600 mt-2">{completedReports || 0}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Usuarios</p>
+                                <p className="text-3xl font-bold text-purple-600 mt-2">{totalUsers || 0}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Zonas */}
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Zonas Activas</h2>
+                    <div className="flex flex-wrap gap-2">
+                        {zonasUnicas.length > 0 ? (
+                            zonasUnicas.map((zona) => (
+                                <span
+                                    key={zona}
+                                    className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium"
+                                >
+                                    {zona}
+                                </span>
+                            ))
+                        ) : (
+                            <p className="text-sm text-gray-600">No hay zonas registradas</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Reportes Activos */}
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                    <div className="flex items-center mb-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                             <svg
-                                className="h-6 w-6 text-yellow-400"
+                                className="w-6 h-6 text-blue-600"
                                 fill="none"
-                                viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                viewBox="0 0 24 24"
                             >
                                 <path
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeWidth={2}
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                                 />
                             </svg>
                         </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-yellow-800">
-                                Panel Administrativo en Desarrollo
-                            </h3>
-                            <div className="mt-2 text-sm text-yellow-700">
-                                <p>El panel de administración está en construcción. Próximamente podrás:</p>
-                                <ul className="list-disc list-inside mt-2 space-y-1">
-                                    <li>Gestionar usuarios (conductores, comerciales, admins)</li>
-                                    <li>Asignar zonas geográficas a comerciales</li>
-                                    <li>Ver estadísticas globales del sistema</li>
-                                    <li>Exportar tickets procesados</li>
-                                    <li>Configurar integraciones (n8n, OpenAI)</li>
-                                </ul>
-                            </div>
-                        </div>
+                        <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                            Reportes Activos (Todas las Zonas)
+                        </h3>
                     </div>
+                    <AllReportsList status={['draft', 'submitted', 'resolved_by_driver']} limit={20} />
                 </div>
 
-                {/* Feature Cards Grid */}
-                <div className="grid md:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                    className="w-6 h-6 text-purple-600"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                                    />
-                                </svg>
-                            </div>
-                            <h3 className="ml-3 text-lg font-semibold text-gray-900">Usuarios</h3>
+                {/* Reportes Completados */}
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                    <div className="flex items-center mb-4">
+                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg
+                                className="w-6 h-6 text-green-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
                         </div>
-                        <p className="text-gray-600 text-sm mb-4">
-                            Crear y gestionar usuarios del sistema con roles específicos.
-                        </p>
-                        <button
-                            disabled
-                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
-                        >
-                            Próximamente
-                        </button>
+                        <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                            Reportes Completados (Todas las Zonas)
+                        </h3>
                     </div>
-
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                    className="w-6 h-6 text-indigo-600"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                    />
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                </svg>
-                            </div>
-                            <h3 className="ml-3 text-lg font-semibold text-gray-900">Zonas</h3>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-4">
-                            Gestionar zonas geográficas y asignar comerciales.
-                        </p>
-                        <button
-                            disabled
-                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
-                        >
-                            Próximamente
-                        </button>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                    className="w-6 h-6 text-green-600"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                </svg>
-                            </div>
-                            <h3 className="ml-3 text-lg font-semibold text-gray-900">
-                                Tickets Procesados
-                            </h3>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-4">
-                            Exportar y analizar tickets procesados históricamente.
-                        </p>
-                        <button
-                            disabled
-                            className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed"
-                        >
-                            Próximamente
-                        </button>
-                    </div>
+                    <AllReportsList status={['completed', 'timed_out', 'archived']} limit={20} />
                 </div>
 
-                {/* Database Schema Info */}
-                <div className="bg-purple-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-purple-900 mb-4">
-                        Esquema de Base de Datos Implementado
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div className="bg-white rounded p-4">
-                            <h4 className="font-semibold text-purple-800 mb-2">Tablas Principales:</h4>
-                            <ul className="text-sm text-gray-700 space-y-1">
-                                <li>✅ <code className="bg-gray-100 px-1">user_profiles</code> - Usuarios y roles</li>
-                                <li>✅ <code className="bg-gray-100 px-1">stores</code> - Tiendas OXXO</li>
-                                <li>✅ <code className="bg-gray-100 px-1">reportes</code> - Reportes de entrega</li>
-                                <li>✅ <code className="bg-gray-100 px-1">messages</code> - Chat en tiempo real</li>
-                                <li>✅ <code className="bg-gray-100 px-1">processed_tickets</code> - Archivo histórico</li>
-                            </ul>
+                {/* Usuarios */}
+                <div className="bg-white rounded-lg shadow p-6">
+                    <div className="flex items-center mb-4">
+                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg
+                                className="w-6 h-6 text-purple-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                />
+                            </svg>
                         </div>
-                        <div className="bg-white rounded p-4">
-                            <h4 className="font-semibold text-purple-800 mb-2">Características:</h4>
-                            <ul className="text-sm text-gray-700 space-y-1">
-                                <li>✅ 14 migraciones SQL aplicables</li>
-                                <li>✅ RLS policies por rol (conductor/comercial/admin)</li>
-                                <li>✅ Triggers automáticos para timestamps</li>
-                                <li>✅ Función atómica para crear reportes</li>
-                                <li>✅ Índices optimizados para queries</li>
-                            </ul>
-                        </div>
+                        <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                            Todos los Usuarios
+                        </h3>
                     </div>
-
-                    <div className="mt-4 bg-white rounded p-4">
-                        <h4 className="font-semibold text-purple-800 mb-2">Estado del Sistema:</h4>
-                        <div className="flex items-center gap-6 text-sm">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                <span>Arquitectura: Completa</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                                <span>UI: En desarrollo</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                <span>Integraciones: Pendiente</span>
-                            </div>
-                        </div>
-                    </div>
+                    <UsersList />
                 </div>
             </div>
         </div>

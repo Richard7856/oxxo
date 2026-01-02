@@ -401,3 +401,42 @@ export async function resolveReport(reportId: string) {
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
     redirect(`/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}`);
 }
+
+export async function saveTicketData(reportId: string, ticketData: any) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el reporte pertenece al usuario
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    // Guardar los datos del ticket
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({
+            ticket_data: ticketData,
+            ticket_extraction_confirmed: true,
+        })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error saving ticket data:', updateError);
+        return { error: 'Error al guardar los datos del ticket' };
+    }
+
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true };
+}

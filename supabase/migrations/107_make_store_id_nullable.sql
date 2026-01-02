@@ -5,3 +5,5 @@ ALTER TABLE reportes ALTER COLUMN store_id DROP NOT NULL;
 -- Comment
 COMMENT ON COLUMN reportes.store_id IS 'Deprecated: Store data is stored denormalized in store_codigo, store_nombre, store_zona. This field is kept for backward compatibility but can be NULL.';
 
+
+

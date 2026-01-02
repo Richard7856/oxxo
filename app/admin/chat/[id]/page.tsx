@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CommercialChatInterface from '@/components/comercial/commercial-chat-interface';
 
-export default async function CommercialChatPage({
+export default async function AdminChatPage({
     params,
 }: {
     params: Promise<{ id: string }>;
@@ -18,18 +18,18 @@ export default async function CommercialChatPage({
         redirect('/login');
     }
 
-    // Verificar que el usuario sea comercial
+    // Verificar que el usuario sea administrador
     const { data: profile } = await supabase
         .from('user_profiles')
-        .select('role, zona')
+        .select('role')
         .eq('id', user.id)
         .single();
 
-    if (profile?.role !== 'comercial') {
+    if (profile?.role !== 'administrador') {
         redirect('/');
     }
 
-    // Get report info
+    // Get report info (sin restricción de zona para admin)
     const { data: report } = await supabase
         .from('reportes')
         .select('*')
@@ -37,12 +37,7 @@ export default async function CommercialChatPage({
         .single();
 
     if (!report) {
-        redirect('/comercial');
-    }
-
-    // Verificar que el reporte pertenece a la zona del comercial
-    if (report.store_zona !== profile.zona) {
-        redirect('/comercial');
+        redirect('/admin');
     }
 
     // Get messages
@@ -56,11 +51,11 @@ export default async function CommercialChatPage({
         <div className="bg-white min-h-screen">
             <header className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/comercial" className="text-gray-600">
+                    <Link href="/admin" className="text-gray-600">
                         ← Volver al Panel
                     </Link>
                     <h1 className="font-semibold text-lg">
-                        Chat - {report.store_nombre} ({report.store_codigo})
+                        Chat - {report.store_nombre} ({report.store_codigo}) - {report.store_zona}
                     </h1>
                     <div className="w-8"></div> {/* Spacer */}
                 </div>

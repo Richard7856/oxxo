@@ -12,3 +12,5 @@ console.log('\nSubject (VAPID_SUBJECT - use your email or app URL):');
 console.log('mailto:admin@oxxo.com');
 console.log('\n=== Add these to your .env.local file ===\n');
 
+
+

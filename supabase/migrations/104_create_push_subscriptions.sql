@@ -27,3 +27,5 @@ COMMENT ON COLUMN push_subscriptions.endpoint IS 'Push service endpoint URL';
 COMMENT ON COLUMN push_subscriptions.p256dh IS 'User public key for encryption';
 COMMENT ON COLUMN push_subscriptions.auth IS 'Authentication secret';
 
+
+

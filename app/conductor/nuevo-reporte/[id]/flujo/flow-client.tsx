@@ -151,25 +151,46 @@ export default function FlowClient({
         if (currentStep === '8' || currentStep === 'ticket') {
             return (
                 <EvidenceUpload
-                    title="8. Ticket de Entrega"
-                    description="Foto del ticket de entrega impreso"
+                    title="8. Ticket de Recibido"
+                    description="Foto del ticket de recibido"
                     stepIndicator="Paso 6 de 8"
-                    initialImage={initialEvidence['ticket']}
-                    onImageSelected={(file) => handleUpload('ticket', file)}
-                    onContinue={() => goTo('9')}
+                    initialImage={initialEvidence['ticket_recibido'] || initialEvidence['ticket']}
+                    onImageSelected={async (file) => {
+                        await handleUpload('ticket_recibido', file);
+                    }}
+                    onContinue={() => goTo('8a')}
                 />
             );
         }
 
-        if (currentStep === '9') { // Ticket Confirm
+        // Preguntar si hay ticket de merma después de subir el ticket recibido
+        if (currentStep === '8a' || currentStep === 'ticket_merma_check') {
             return (
-                <div className="max-w-md mx-auto text-center py-8">
-                    <h2 className="text-2xl font-bold mb-4">9. Confirmar Ticket</h2>
-                    <p className="text-gray-600 mb-8">Datos extraídos del ticket...</p>
-                    <button onClick={() => goTo('return_check')} className="bg-red-600 text-white px-8 py-3 rounded-lg w-full">
-                        Confirmar y Continuar
-                    </button>
-                </div>
+                <ActionStep
+                    title="¿Hay Ticket de Merma?"
+                    description="¿Tienes un ticket de merma que necesitas subir?"
+                    onYes={() => goTo('8b')}
+                    onNo={() => {
+                        // Si no hay ticket de merma, ir directamente a revisión
+                        router.push(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
+                    }}
+                />
+            );
+        }
+
+        if (currentStep === '8b' || currentStep === 'ticket_merma') {
+            return (
+                <EvidenceUpload
+                    title="8b. Ticket de Merma (Opcional)"
+                    description="Foto del ticket de merma si aplica"
+                    stepIndicator="Paso 6b de 8"
+                    initialImage={initialEvidence['ticket_merma']}
+                    onImageSelected={(file) => handleUpload('ticket_merma', file)}
+                    onContinue={() => {
+                        // Redirigir a la página de revisión después de subir el ticket de merma
+                        router.push(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
+                    }}
+                />
             );
         }
 

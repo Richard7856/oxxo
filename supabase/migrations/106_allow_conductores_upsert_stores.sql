@@ -25,3 +25,5 @@ CREATE POLICY "Conductores can update stores"
 COMMENT ON POLICY "Conductores can insert stores" ON stores IS 'Allows conductors to create stores during validation';
 COMMENT ON POLICY "Conductores can update stores" ON stores IS 'Allows conductors to update stores during validation';
 
+
+

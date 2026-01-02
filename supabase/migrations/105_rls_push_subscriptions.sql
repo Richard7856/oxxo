@@ -32,3 +32,5 @@ COMMENT ON POLICY "Users can insert own push subscriptions" ON push_subscription
 COMMENT ON POLICY "Users can update own push subscriptions" ON push_subscriptions IS 'Users can only update their own subscriptions';
 COMMENT ON POLICY "Users can delete own push subscriptions" ON push_subscriptions IS 'Users can only delete their own subscriptions';
 
+
+
