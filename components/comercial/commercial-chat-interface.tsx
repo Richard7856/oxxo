@@ -117,7 +117,7 @@ export default function CommercialChatInterface({
         try {
             const { error } = await supabase.from('messages').insert({
                 reporte_id: reportId,
-                sender: 'comercial',
+                sender: 'agent', // 'agent' es el tipo correcto según MessageSender
                 sender_user_id: userId,
                 text: newMessage,
             });
@@ -187,7 +187,7 @@ export default function CommercialChatInterface({
                 ) : (
                     <div className="space-y-4">
                         {messages.map((msg) => {
-                            const isMe = (msg.sender_user_id && msg.sender_user_id === userId) || msg.sender === 'comercial';
+                            const isMe = (msg.sender_user_id && msg.sender_user_id === userId) || msg.sender === 'agent';
                             return (
                                 <div
                                     key={msg.id}
