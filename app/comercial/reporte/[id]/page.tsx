@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import CloseReportButton from '@/components/comercial/close-report-button';
 import ReportTimeline from '@/components/comercial/report-timeline';
+import TicketDashboard from '@/components/comercial/ticket-dashboard';
 
 export default async function ReportDetailPage({
     params,
@@ -114,6 +115,17 @@ export default async function ReportDetailPage({
                         )}
                     </div>
                 </div>
+
+                {/* Ticket Dashboard */}
+                {report.ticket_data && (
+                    <div className="bg-white rounded-lg shadow p-6 mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Dashboard de Ticket</h2>
+                        <TicketDashboard 
+                            ticketData={report.ticket_data as any}
+                            incidentDetails={report.incident_details as any}
+                        />
+                    </div>
+                )}
 
                 {/* Timeline */}
                 <div className="bg-white rounded-lg shadow p-6 mb-6">

@@ -6,7 +6,9 @@ import EvidenceUpload from '@/components/conductor/evidence-upload';
 import DoubleEvidenceUpload from '@/components/conductor/double-evidence-upload';
 import ActionStep from '@/components/conductor/action-step';
 import IncidentCart from '@/components/conductor/incident-cart';
-import { uploadEvidence, updateCurrentStep } from '@/app/conductor/actions';
+import FinishStep from '@/components/conductor/finish-step';
+import ReasonUpload from '@/components/conductor/reason-upload';
+import { uploadEvidence, updateCurrentStep, submitReport } from '@/app/conductor/actions';
 
 interface FlowClientProps {
     reportId: string;
@@ -148,28 +150,56 @@ export default function FlowClient({
             );
         }
 
-        if (currentStep === '8' || currentStep === 'ticket') {
+        // Paso 8: Preguntar si hay ticket de recibido
+        if (currentStep === '8' || currentStep === 'ticket_check') {
             return (
-                <EvidenceUpload
-                    title="8. Ticket de Recibido"
-                    description="Foto del ticket de recibido"
-                    stepIndicator="Paso 6 de 8"
-                    initialImage={initialEvidence['ticket_recibido'] || initialEvidence['ticket']}
-                    onImageSelected={async (file) => {
-                        await handleUpload('ticket_recibido', file);
-                    }}
-                    onContinue={() => goTo('8a')}
+                <ActionStep
+                    title="¿Hay Ticket de Recibido?"
+                    description="¿Tienes un ticket de recibido de la tienda?"
+                    onYes={() => goTo('8a')}
+                    onNo={() => goTo('8b')}
                 />
             );
         }
 
-        // Preguntar si hay ticket de merma después de subir el ticket recibido
-        if (currentStep === '8a' || currentStep === 'ticket_merma_check') {
+        // Paso 8a: Si hay ticket, pedir foto del ticket
+        if (currentStep === '8a' || currentStep === 'ticket_recibido') {
+            return (
+                <EvidenceUpload
+                    title="8a. Ticket de Recibido"
+                    description="Foto del ticket de recibido"
+                    stepIndicator="Paso 6 de 8"
+                    initialImage={initialEvidence['ticket_recibido']}
+                    onImageSelected={async (file) => {
+                        await handleUpload('ticket_recibido', file);
+                    }}
+                    onContinue={() => goTo('8c')}
+                />
+            );
+        }
+
+        // Paso 8b: Si no hay ticket, pedir razón y foto opcional
+        if (currentStep === '8b' || currentStep === 'ticket_no_reason') {
+            return (
+                <ReasonUpload
+                    title="8b. Razón de No Ticket"
+                    description="Indica la razón por la que no hay ticket de recibido"
+                    stepIndicator="Paso 6 de 8"
+                    reportId={reportId}
+                    initialReason={null}
+                    initialImage={initialEvidence['no_ticket_reason_photo']}
+                    onContinue={() => goTo('8c')}
+                />
+            );
+        }
+
+        // Paso 8c: Preguntar si hay ticket de merma
+        if (currentStep === '8c' || currentStep === 'ticket_merma_check') {
             return (
                 <ActionStep
                     title="¿Hay Ticket de Merma?"
                     description="¿Tienes un ticket de merma que necesitas subir?"
-                    onYes={() => goTo('8b')}
+                    onYes={() => goTo('8d')}
                     onNo={() => {
                         // Si no hay ticket de merma, ir directamente a revisión
                         router.push(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
@@ -178,12 +208,13 @@ export default function FlowClient({
             );
         }
 
-        if (currentStep === '8b' || currentStep === 'ticket_merma') {
+        // Paso 8d: Si hay ticket de merma, pedir foto
+        if (currentStep === '8d' || currentStep === 'ticket_merma') {
             return (
                 <EvidenceUpload
-                    title="8b. Ticket de Merma (Opcional)"
-                    description="Foto del ticket de merma si aplica"
-                    stepIndicator="Paso 6b de 8"
+                    title="8d. Ticket de Merma"
+                    description="Foto del ticket de merma"
+                    stepIndicator="Paso 7 de 8"
                     initialImage={initialEvidence['ticket_merma']}
                     onImageSelected={(file) => handleUpload('ticket_merma', file)}
                     onContinue={() => {
@@ -264,21 +295,10 @@ export default function FlowClient({
 
     if (currentStep === 'finish') {
         return (
-            <div className="max-w-md mx-auto text-center py-12">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Reporte Enviado!</h2>
-                <p className="text-gray-600 mb-8">Tu reporte ha sido registrado exitosamente.</p>
-                <button
-                    onClick={() => router.push('/conductor')}
-                    className="bg-gray-900 text-white px-8 py-3 rounded-lg w-full hover:bg-gray-800 transition-colors"
-                >
-                    Volver al Inicio
-                </button>
-            </div>
+            <FinishStep 
+                reportId={reportId}
+                onComplete={() => router.push('/conductor')}
+            />
         );
     }
 

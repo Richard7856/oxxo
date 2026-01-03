@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import AllReportsList from '@/components/admin/all-reports-list';
 import UsersList from '@/components/admin/users-list';
+import PWAInstallButton from '@/components/pwa-install-button';
+import PushNotificationManager from '@/components/push-notification-manager';
+import AdminActiveReportsList from '@/components/admin/admin-active-reports-list';
+import AdminCompletedReportsList from '@/components/admin/admin-completed-reports-list';
 
 export default async function AdminPage() {
     const supabase = await createClient();
@@ -130,6 +134,12 @@ export default async function AdminPage() {
                     </div>
                 </div>
 
+                {/* PWA and Notifications */}
+                <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <PWAInstallButton />
+                    <PushNotificationManager userId={user.id} />
+                </div>
+
                 {/* Zonas */}
                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">Zonas Activas</h2>
@@ -149,7 +159,7 @@ export default async function AdminPage() {
                     </div>
                 </div>
 
-                {/* Reportes Activos */}
+                {/* Reportes Activos - Vista Detallada */}
                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                     <div className="flex items-center mb-4">
                         <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -167,14 +177,19 @@ export default async function AdminPage() {
                                 />
                             </svg>
                         </div>
-                        <h3 className="ml-3 text-lg font-semibold text-gray-900">
-                            Reportes Activos (Todas las Zonas)
-                        </h3>
+                        <div className="ml-3 flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Reportes Activos (Todas las Zonas)
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Incluye reportes enviados y en proceso (borradores)
+                            </p>
+                        </div>
                     </div>
-                    <AllReportsList status={['draft', 'submitted', 'resolved_by_driver']} limit={20} />
+                    <AdminActiveReportsList />
                 </div>
 
-                {/* Reportes Completados */}
+                {/* Reportes Completados - Vista Detallada */}
                 <div className="bg-white rounded-lg shadow p-6 mb-6">
                     <div className="flex items-center mb-4">
                         <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -196,30 +211,30 @@ export default async function AdminPage() {
                             Reportes Completados (Todas las Zonas)
                         </h3>
                     </div>
-                    <AllReportsList status={['completed', 'timed_out', 'archived']} limit={20} />
+                    <AdminCompletedReportsList />
                 </div>
 
                 {/* Usuarios */}
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center mb-4">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <svg
-                                className="w-6 h-6 text-purple-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                                />
-                            </svg>
-                        </div>
-                        <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="flex items-center mb-4">
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <svg
+                                    className="w-6 h-6 text-purple-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                    />
+                                </svg>
+                            </div>
+                            <h3 className="ml-3 text-lg font-semibold text-gray-900">
                             Todos los Usuarios
-                        </h3>
+                            </h3>
                     </div>
                     <UsersList />
                 </div>

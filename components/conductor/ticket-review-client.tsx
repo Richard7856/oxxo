@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketReview from './ticket-review';
 import { ExtractedTicketData } from '@/lib/ai/extract-ticket-data';
-import { saveTicketData } from '@/app/conductor/actions';
+import { saveTicketData, submitReport } from '@/app/conductor/actions';
 
 interface TicketReviewClientProps {
     reportId: string;
@@ -25,9 +25,12 @@ export default function TicketReviewClient({
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Si no hay datos iniciales, extraer del ticket
-        if (!initialTicketData && ticketImageUrl) {
+        // Si no hay datos iniciales y hay URL de ticket, extraer del ticket
+        if (!initialTicketData && ticketImageUrl && ticketImageUrl.startsWith('http')) {
             extractTicketData();
+        } else if (!ticketImageUrl) {
+            // Si no hay ticket, no intentar extraer
+            setLoading(false);
         }
     }, []);
 
@@ -36,11 +39,25 @@ export default function TicketReviewClient({
         setError(null);
 
         try {
-            // Convertir la URL local a una URL pública si es necesario
-            // Si es una URL de Supabase, usarla directamente
-            const imageUrl = ticketImageUrl.startsWith('http') 
-                ? ticketImageUrl 
-                : ticketImageUrl;
+            // La URL debe ser una URL pública de Supabase, no una URL local
+            // Si es una URL local (blob:), necesitamos obtener la URL pública
+            let imageUrl = ticketImageUrl;
+            
+            // Si es una URL de blob o local, intentar obtener la URL pública desde el reporte
+            if (ticketImageUrl.startsWith('blob:') || !ticketImageUrl.startsWith('http')) {
+                // Obtener la URL pública desde el reporte
+                const response = await fetch(`/api/reportes/${reportId}`);
+                if (response.ok) {
+                    const reportData = await response.json();
+                    const evidence = reportData.evidence || {};
+                    imageUrl = evidence['ticket_recibido'] || evidence['ticket'] || ticketImageUrl;
+                }
+            }
+
+            // Asegurarse de que la URL sea accesible públicamente
+            if (!imageUrl.startsWith('http')) {
+                throw new Error('La imagen debe ser una URL pública');
+            }
 
             const response = await fetch('/api/tickets/extract', {
                 method: 'POST',
@@ -51,7 +68,8 @@ export default function TicketReviewClient({
             });
 
             if (!response.ok) {
-                throw new Error('Error al extraer datos del ticket');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Error al extraer datos del ticket');
             }
 
             const result = await response.json();
@@ -65,11 +83,13 @@ export default function TicketReviewClient({
     };
 
     const handleSave = async (data: ExtractedTicketData) => {
-        const result = await saveTicketData(reportId, data);
-        if (result.error) {
-            throw new Error(result.error);
+        // Primero guardar los datos del ticket
+        const saveResult = await saveTicketData(reportId, data);
+        if (saveResult.error) {
+            throw new Error(saveResult.error);
         }
-        // Redirigir al siguiente paso
+        
+        // Redirigir al siguiente paso (pregunta sobre ticket de devolución)
         router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=return_check`);
     };
 

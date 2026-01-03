@@ -39,9 +39,18 @@ export async function closeReport(reportId: string) {
         return { error: 'No tienes permiso para cerrar este reporte' };
     }
 
-    // Solo se pueden cerrar reportes que estén en submitted o resolved_by_driver
-    if (report.status !== 'submitted' && report.status !== 'resolved_by_driver') {
-        return { error: 'Solo se pueden cerrar reportes en estado "Enviado" o "Resuelto por Conductor"' };
+    // Solo se pueden cerrar reportes que estén en draft, submitted o resolved_by_driver
+    // Los administradores pueden cerrar cualquier reporte (excepto completed)
+    if (profile.role === 'administrador') {
+        // Admin puede cerrar cualquier reporte excepto los ya completados
+        if (report.status === 'completed' || report.status === 'archived') {
+            return { error: 'No se puede cerrar un reporte que ya está completado o archivado' };
+        }
+    } else {
+        // Comercial solo puede cerrar reportes enviados o resueltos
+        if (report.status !== 'submitted' && report.status !== 'resolved_by_driver') {
+            return { error: 'Solo se pueden cerrar reportes en estado "Enviado" o "Resuelto por Conductor"' };
+        }
     }
 
     // Actualizar el estado a completed

@@ -113,6 +113,61 @@ export async function uploadEvidence(
     return { success: true, url: publicUrl };
 }
 
+export async function saveNoTicketReason(reportId: string, reason: string, imageFile?: File) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el reporte pertenece al usuario
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id, metadata')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    // Guardar la razón en metadata
+    const currentMetadata = (report.metadata as Record<string, any>) || {};
+    const updatedMetadata = {
+        ...currentMetadata,
+        no_ticket_reason: reason,
+    };
+
+    // Si hay imagen, guardarla primero
+    let imageUrl: string | undefined;
+    if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        const uploadResult = await uploadEvidence(reportId, 'no_ticket_reason_photo', formData);
+        if (uploadResult.error) {
+            return { error: uploadResult.error };
+        }
+        imageUrl = uploadResult.url;
+        updatedMetadata.no_ticket_reason_photo = imageUrl;
+    }
+
+    // Actualizar metadata
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({ metadata: updatedMetadata })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error saving no ticket reason:', updateError);
+        return { error: 'Error al guardar la razón' };
+    }
+
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true };
+}
+
 export async function updateCurrentStep(reportId: string, step: string) {
     const supabase = await createClient();
     const {
@@ -413,7 +468,7 @@ export async function saveTicketData(reportId: string, ticketData: any) {
     // Verificar que el reporte pertenece al usuario
     const { data: report } = await supabase
         .from('reportes')
-        .select('id')
+        .select('id, status, evidence')
         .eq('id', reportId)
         .eq('user_id', user.id)
         .single();
@@ -438,5 +493,89 @@ export async function saveTicketData(reportId: string, ticketData: any) {
 
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true };
+}
+
+export async function submitReport(reportId: string) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el reporte pertenece al usuario
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    // Solo permitir enviar reportes en draft
+    if (report.status !== 'draft') {
+        return { error: 'El reporte ya fue enviado' };
+    }
+
+    // Verificar que el ticket fue procesado (para reportes de entrega)
+    if (report.tipo_reporte === 'entrega' && !report.ticket_extraction_confirmed) {
+        return { error: 'Debes procesar el ticket antes de enviar el reporte' };
+    }
+
+    // Cambiar el estado a submitted
+    const now = new Date().toISOString();
+    const timeoutAt = new Date(Date.now() + 20 * 60 * 1000).toISOString(); // 20 minutos
+
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({
+            status: 'submitted',
+            submitted_at: now,
+            timeout_at: timeoutAt,
+        })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error submitting report:', updateError);
+        return { error: 'Error al enviar el reporte' };
+    }
+
+    // Enviar notificación push a comerciales de la zona
+    try {
+        const { data: comerciales } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('role', 'comercial')
+            .eq('zona', report.store_zona);
+
+        if (comerciales && comerciales.length > 0) {
+            // Enviar notificación a cada comercial
+            comerciales.forEach((comercial) => {
+                fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/push/send-chat-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: comercial.id,
+                        reportId: reportId,
+                        storeName: report.store_nombre,
+                        remainingMinutes: 20,
+                    }),
+                }).catch((err) => {
+                    console.error('Error sending push notification:', err);
+                });
+            });
+        }
+    } catch (err) {
+        console.error('Error in push notification:', err);
+    }
+
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    revalidatePath('/conductor');
     return { success: true };
 }

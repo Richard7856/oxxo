@@ -31,11 +31,19 @@ export default async function TicketReviewPage({
 
     // Get ticket images
     const evidence = (report.evidence as Record<string, string>) || {};
-    const ticketImageUrl = evidence['ticket'] || evidence['ticket_recibido'] || null;
+    const ticketImageUrl = evidence['ticket_recibido'] || null; // Solo usar ticket_recibido, no ticket
     const mermaImageUrl = evidence['ticket_merma'] || null;
+    const metadata = (report.metadata as Record<string, any>) || {};
+    const noTicketReason = metadata['no_ticket_reason'] || null;
 
-    if (!ticketImageUrl) {
+    // Si no hay ticket de recibido y no hay razón, redirigir al flujo
+    if (!ticketImageUrl && !noTicketReason) {
         redirect(`/conductor/nuevo-reporte/${id}/flujo?step=8`);
+    }
+
+    // Si no hay ticket pero hay razón, redirigir directamente a return_check (no hay ticket para procesar)
+    if (!ticketImageUrl && noTicketReason) {
+        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=return_check`);
     }
 
     // Get existing ticket data if available
