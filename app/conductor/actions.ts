@@ -135,7 +135,7 @@ export async function saveNoTicketReason(reportId: string, reason: string, image
 
     // Guardar la razón en metadata
     const currentMetadata = (report.metadata as Record<string, any>) || {};
-    const updatedMetadata = {
+    const updatedMetadata: Record<string, any> = {
         ...currentMetadata,
         no_ticket_reason: reason,
     };
