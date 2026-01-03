@@ -434,10 +434,28 @@ export async function resolveReport(reportId: string) {
 
     if (report.tipo_reporte === 'entrega') {
         const evidence = report.evidence as Record<string, string> || {};
-        if (!evidence['ticket']) {
-            nextStep = 'ticket';
-        } else if (!evidence['return_ticket']) {
-            nextStep = 'return_check';
+        
+        // Flujo: arrival_exhibit -> incident_check -> (5 si hay incidencias) -> 6 (product_arranged) -> 7 (waste_check) -> 7a/7b -> 8 (ticket_check) -> ...
+        
+        // Si tiene arrival_exhibit pero no product_arranged, siguiente paso es 6 (Producto Acomodado)
+        if (evidence['arrival_exhibit'] && !evidence['product_arranged']) {
+            nextStep = '6';
+        }
+        // Si tiene product_arranged pero no waste_evidence ni remission, siguiente paso es 7 (¿Hay Merma?)
+        else if (evidence['product_arranged'] && !evidence['waste_evidence'] && !evidence['remission']) {
+            nextStep = '7';
+        }
+        // Si tiene waste_evidence o remission pero no ticket_recibido ni no_ticket_reason, siguiente paso es 8 (¿Hay Ticket de Recibido?)
+        else if ((evidence['waste_evidence'] || evidence['remission']) && !evidence['ticket_recibido'] && !evidence['no_ticket_reason']) {
+            nextStep = '8';
+        }
+        // Si tiene ticket_recibido o no_ticket_reason pero no ticket_merma, siguiente paso es 8c (¿Hay Ticket de Merma?)
+        else if ((evidence['ticket_recibido'] || evidence['no_ticket_reason']) && !evidence['ticket_merma']) {
+            nextStep = '8c';
+        }
+        // Si tiene todo, siguiente paso es finish
+        else {
+            nextStep = 'finish';
         }
     } else if (report.tipo_reporte === 'tienda_cerrada') {
         nextStep = 'finish'; // Tienda cerrada solo tiene un paso de evidencia y luego termina
@@ -452,9 +470,9 @@ export async function resolveReport(reportId: string) {
         .eq('id', reportId)
         .eq('user_id', user.id);
 
-    // Redirigir al flujo del reporte para continuar con los siguientes pasos
+    // Retornar el siguiente paso para que el cliente haga la redirección
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
-    redirect(`/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}`);
+    return { success: true, nextStep, flowUrl: `/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}` };
 }
 
 export async function saveTicketData(reportId: string, ticketData: any) {
@@ -492,6 +510,45 @@ export async function saveTicketData(reportId: string, ticketData: any) {
     }
 
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true };
+}
+
+export async function saveTicketMermaData(reportId: string, ticketData: any) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el reporte pertenece al usuario
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    // Guardar los datos del ticket de merma en return_ticket_data
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({
+            return_ticket_data: ticketData,
+            return_ticket_extraction_confirmed: true,
+        })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error saving ticket merma data:', updateError);
+        return { error: 'Error al guardar los datos del ticket de merma' };
+    }
+
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/ticket-merma-review`);
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
     return { success: true };
 }

@@ -55,7 +55,7 @@ export default function FlowClient({
         if (currentStep === '4a' || currentStep === 'arrival_exhibit') {
             return (
                 <DoubleEvidenceUpload
-                    title="4. Foto del Exhibidor"
+                    title="1. Foto del Exhibidor"
                     description="Toma fotos del exhibidor a tu llegada"
                     stepIndicator="Paso 1 de 8"
                     firstLabel="Primera foto"
@@ -94,9 +94,9 @@ export default function FlowClient({
         if (currentStep === '6' || currentStep === 'product_arranged') {
             return (
                 <DoubleEvidenceUpload
-                    title="6. Producto Acomodado"
+                    title="2. Producto Acomodado"
                     description="Fotos del producto ya acomodado en el exhibidor"
-                    stepIndicator="Paso 3 de 8"
+                    stepIndicator="Paso 2 de 8"
                     firstLabel="Primera foto"
                     secondLabel="Segunda foto"
                     secondOptional={true}
@@ -127,9 +127,9 @@ export default function FlowClient({
         if (currentStep === '7a') { // Waste Evidence
             return (
                 <EvidenceUpload
-                    title="7. Evidencia de Merma"
+                    title="3. Evidencia de Merma"
                     description="Foto del producto retirado (merma)"
-                    stepIndicator="Paso 5 de 8"
+                    stepIndicator="Paso 3 de 8"
                     initialImage={initialEvidence['waste_evidence']}
                     onImageSelected={(file) => handleUpload('waste_evidence', file)}
                     onContinue={() => goTo('8')}
@@ -140,9 +140,9 @@ export default function FlowClient({
         if (currentStep === '7b') { // Remission (No Waste)
             return (
                 <EvidenceUpload
-                    title="7. Remisión"
+                    title="3. Remisión"
                     description="Foto de la remisión firmada"
-                    stepIndicator="Paso 5 de 8"
+                    stepIndicator="Paso 3 de 8"
                     initialImage={initialEvidence['remission']}
                     onImageSelected={(file) => handleUpload('remission', file)}
                     onContinue={() => goTo('8')}
@@ -150,7 +150,7 @@ export default function FlowClient({
             );
         }
 
-        // Paso 8: Preguntar si hay ticket de recibido
+        // Paso 4: Preguntar si hay ticket de recibido
         if (currentStep === '8' || currentStep === 'ticket_check') {
             return (
                 <ActionStep
@@ -162,29 +162,32 @@ export default function FlowClient({
             );
         }
 
-        // Paso 8a: Si hay ticket, pedir foto del ticket
+        // Paso 4a: Si hay ticket, pedir foto del ticket
         if (currentStep === '8a' || currentStep === 'ticket_recibido') {
             return (
                 <EvidenceUpload
-                    title="8a. Ticket de Recibido"
+                    title="4. Ticket de Recibido"
                     description="Foto del ticket de recibido"
-                    stepIndicator="Paso 6 de 8"
+                    stepIndicator="Paso 4 de 8"
                     initialImage={initialEvidence['ticket_recibido']}
                     onImageSelected={async (file) => {
                         await handleUpload('ticket_recibido', file);
                     }}
-                    onContinue={() => goTo('8c')}
+                    onContinue={() => {
+                        // Redirigir a la página de revisión del ticket de recibido
+                        router.push(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
+                    }}
                 />
             );
         }
 
-        // Paso 8b: Si no hay ticket, pedir razón y foto opcional
+        // Paso 4b: Si no hay ticket, pedir razón y foto opcional
         if (currentStep === '8b' || currentStep === 'ticket_no_reason') {
             return (
                 <ReasonUpload
-                    title="8b. Razón de No Ticket"
+                    title="4. Razón de No Ticket"
                     description="Indica la razón por la que no hay ticket de recibido"
-                    stepIndicator="Paso 6 de 8"
+                    stepIndicator="Paso 4 de 8"
                     reportId={reportId}
                     initialReason={null}
                     initialImage={initialEvidence['no_ticket_reason_photo']}
@@ -193,71 +196,32 @@ export default function FlowClient({
             );
         }
 
-        // Paso 8c: Preguntar si hay ticket de merma
+        // Paso 5: Preguntar si hay ticket de merma
         if (currentStep === '8c' || currentStep === 'ticket_merma_check') {
             return (
                 <ActionStep
                     title="¿Hay Ticket de Merma?"
                     description="¿Tienes un ticket de merma que necesitas subir?"
                     onYes={() => goTo('8d')}
-                    onNo={() => {
-                        // Si no hay ticket de merma, ir directamente a revisión
-                        router.push(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
-                    }}
-                />
-            );
-        }
-
-        // Paso 8d: Si hay ticket de merma, pedir foto
-        if (currentStep === '8d' || currentStep === 'ticket_merma') {
-            return (
-                <EvidenceUpload
-                    title="8d. Ticket de Merma"
-                    description="Foto del ticket de merma"
-                    stepIndicator="Paso 7 de 8"
-                    initialImage={initialEvidence['ticket_merma']}
-                    onImageSelected={(file) => handleUpload('ticket_merma', file)}
-                    onContinue={() => {
-                        // Redirigir a la página de revisión después de subir el ticket de merma
-                        router.push(`/conductor/nuevo-reporte/${reportId}/ticket-review`);
-                    }}
-                />
-            );
-        }
-
-        if (currentStep === 'return_check') {
-            return (
-                <ActionStep
-                    title="¿Hay Ticket de Devolución?"
-                    description="¿La tienda generó un ticket de devolución?"
-                    onYes={() => goTo('10')}
                     onNo={() => goTo('finish')}
                 />
             );
         }
 
-        if (currentStep === '10') { // Return Ticket
+        // Paso 5a: Si hay ticket de merma, pedir foto
+        if (currentStep === '8d' || currentStep === 'ticket_merma') {
             return (
                 <EvidenceUpload
-                    title="10. Ticket de Devolución"
-                    description="Foto del ticket de devolución"
-                    stepIndicator="Paso 8 de 8"
-                    initialImage={initialEvidence['return_ticket']}
-                    onImageSelected={(file) => handleUpload('return_ticket', file)}
-                    onContinue={() => goTo('11')}
+                    title="5. Ticket de Merma"
+                    description="Foto del ticket de merma"
+                    stepIndicator="Paso 5 de 8"
+                    initialImage={initialEvidence['ticket_merma']}
+                    onImageSelected={(file) => handleUpload('ticket_merma', file)}
+                    onContinue={() => {
+                        // Redirigir a la página de revisión del ticket de merma
+                        router.push(`/conductor/nuevo-reporte/${reportId}/ticket-merma-review`);
+                    }}
                 />
-            );
-        }
-
-        if (currentStep === '11') { // Return Confirm
-            return (
-                <div className="max-w-md mx-auto text-center py-8">
-                    <h2 className="text-2xl font-bold mb-4">11. Confirmar Devolución</h2>
-                    <p className="text-gray-600 mb-8">Datos extraídos de la devolución...</p>
-                    <button onClick={() => goTo('finish')} className="bg-red-600 text-white px-8 py-3 rounded-lg w-full">
-                        Confirmar y Finalizar
-                    </button>
-                </div>
             );
         }
     }

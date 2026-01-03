@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { sendMessage, resolveReport, initializeChat } from '@/app/conductor/actions';
 import { MessageSender } from '@/lib/types/database.types';
@@ -55,6 +56,7 @@ function usePersistentTimer(timeoutAt: string | null | undefined) {
 }
 
 export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages, timeoutAt: initialTimeoutAt }: ChatInterfaceProps) {
+    const router = useRouter();
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
@@ -137,8 +139,20 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
         if (resolving) return;
         setResolving(true);
         try {
-            await resolveReport(reportId);
-        } catch (error) {
+            const result = await resolveReport(reportId);
+            if (result?.error) {
+                alert(result.error);
+                setResolving(false);
+            } else if (result?.success && result?.flowUrl) {
+                // Redirigir al siguiente paso del flujo
+                router.push(result.flowUrl);
+            }
+        } catch (error: any) {
+            // Ignorar errores de redirect de Next.js
+            if (error?.digest?.startsWith('NEXT_REDIRECT') || error?.message?.includes('NEXT_REDIRECT')) {
+                // El redirect se está procesando, no hacer nada
+                return;
+            }
             console.error('Error resolving report:', error);
             alert('Error al resolver reporte');
             setResolving(false);

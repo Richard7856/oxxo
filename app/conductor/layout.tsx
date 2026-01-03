@@ -24,12 +24,12 @@ export default async function ConductorLayout({
         .eq('id', user.id)
         .single();
 
-    // Check for active reporte
+    // Check for active reporte (solo borradores, no enviados)
     const { data: activeReporte } = await supabase
         .from('reportes')
         .select('id, status, created_at')
         .eq('user_id', user.id)
-        .in('status', ['draft', 'submitted'])
+        .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

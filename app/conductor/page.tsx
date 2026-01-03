@@ -34,12 +34,12 @@ export default async function ConductorPage() {
 
 
 
-    // Check for active reporte
+    // Check for active reporte (solo borradores, no enviados)
     const { data: activeReporte } = await supabase
         .from('reportes')
         .select('*')
         .eq('user_id', user.id)
-        .in('status', ['draft', 'submitted'])
+        .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -11,6 +11,7 @@ interface TicketReviewProps {
     extractedData: ExtractedTicketData;
     onSave: (data: ExtractedTicketData) => Promise<void>;
     onBack: () => void;
+    title?: string;
 }
 
 export default function TicketReview({
@@ -20,6 +21,7 @@ export default function TicketReview({
     extractedData: initialData,
     onSave,
     onBack,
+    title = 'Revisar Datos del Ticket',
 }: TicketReviewProps) {
     const [data, setData] = useState<ExtractedTicketData>(initialData);
     const [saving, setSaving] = useState(false);
@@ -70,7 +72,7 @@ export default function TicketReview({
     return (
         <div className="max-w-4xl mx-auto p-4">
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Revisar Datos del Ticket</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">{title}</h2>
                 <p className="text-gray-600 mb-6">
                     Por favor, revisa y corrige la información extraída del ticket. Asegúrate de que todos los datos sean correctos.
                 </p>

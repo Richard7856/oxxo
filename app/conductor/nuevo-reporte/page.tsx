@@ -14,12 +14,12 @@ export default async function NuevoReportePage() {
         redirect('/login');
     }
 
-    // Check if user already has active reporte
+    // Check if user already has active reporte (solo borradores, no enviados)
     const { data: activeReporte } = await supabase
         .from('reportes')
         .select('id, status, created_at, store_nombre')
         .eq('user_id', user.id)
-        .in('status', ['draft', 'submitted'])
+        .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

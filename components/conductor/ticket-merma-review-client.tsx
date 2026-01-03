@@ -4,38 +4,36 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketReview from './ticket-review';
 import { ExtractedTicketData } from '@/lib/ai/extract-ticket-data';
-import { saveTicketData, submitReport } from '@/app/conductor/actions';
+import { saveTicketMermaData } from '@/app/conductor/actions';
 
-interface TicketReviewClientProps {
+interface TicketMermaReviewClientProps {
     reportId: string;
-    ticketImageUrl: string | null;
-    mermaImageUrl: string | null;
-    initialTicketData: any;
+    ticketMermaImageUrl: string | null;
+    initialTicketMermaData: any;
 }
 
-export default function TicketReviewClient({
+export default function TicketMermaReviewClient({
     reportId,
-    ticketImageUrl,
-    mermaImageUrl,
-    initialTicketData,
-}: TicketReviewClientProps) {
+    ticketMermaImageUrl,
+    initialTicketMermaData,
+}: TicketMermaReviewClientProps) {
     const router = useRouter();
-    const [extractedData, setExtractedData] = useState<ExtractedTicketData | null>(initialTicketData);
-    const [loading, setLoading] = useState(!initialTicketData);
+    const [extractedData, setExtractedData] = useState<ExtractedTicketData | null>(initialTicketMermaData);
+    const [loading, setLoading] = useState(!initialTicketMermaData);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         // Si no hay datos iniciales y hay URL de ticket, extraer del ticket
-        if (!initialTicketData && ticketImageUrl && typeof ticketImageUrl === 'string' && ticketImageUrl.startsWith('http')) {
+        if (!initialTicketMermaData && ticketMermaImageUrl && typeof ticketMermaImageUrl === 'string' && ticketMermaImageUrl.startsWith('http')) {
             extractTicketData();
-        } else if (!ticketImageUrl) {
+        } else if (!ticketMermaImageUrl) {
             // Si no hay ticket, no intentar extraer
             setLoading(false);
         }
     }, []);
 
     const extractTicketData = async () => {
-        if (!ticketImageUrl) {
+        if (!ticketMermaImageUrl) {
             setError('No hay imagen de ticket disponible');
             setLoading(false);
             return;
@@ -45,18 +43,15 @@ export default function TicketReviewClient({
         setError(null);
 
         try {
-            // La URL debe ser una URL pública de Supabase, no una URL local
-            // Si es una URL local (blob:), necesitamos obtener la URL pública
-            let imageUrl = ticketImageUrl;
+            let imageUrl = ticketMermaImageUrl;
             
             // Si es una URL de blob o local, intentar obtener la URL pública desde el reporte
-            if (ticketImageUrl.startsWith('blob:') || !ticketImageUrl.startsWith('http')) {
-                // Obtener la URL pública desde el reporte
+            if (ticketMermaImageUrl.startsWith('blob:') || !ticketMermaImageUrl.startsWith('http')) {
                 const response = await fetch(`/api/reportes/${reportId}`);
                 if (response.ok) {
                     const reportData = await response.json();
                     const evidence = reportData.evidence || {};
-                    imageUrl = evidence['ticket_recibido'] || evidence['ticket'] || ticketImageUrl;
+                    imageUrl = evidence['ticket_merma'] || ticketMermaImageUrl;
                 }
             }
 
@@ -89,18 +84,17 @@ export default function TicketReviewClient({
     };
 
     const handleSave = async (data: ExtractedTicketData) => {
-        // Primero guardar los datos del ticket de recibido
-        const saveResult = await saveTicketData(reportId, data);
-        if (saveResult.error) {
-            throw new Error(saveResult.error);
+        const result = await saveTicketMermaData(reportId, data);
+        if (result.error) {
+            throw new Error(result.error);
         }
         
-        // Redirigir al siguiente paso (pregunta sobre ticket de merma)
-        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=8c`);
+        // Redirigir al paso final
+        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=finish`);
     };
 
     const handleBack = () => {
-        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=8`);
+        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=8c`);
     };
 
     if (loading) {
@@ -109,7 +103,7 @@ export default function TicketReviewClient({
                 <div className="bg-white rounded-lg shadow-lg p-6 text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                        Extrayendo datos del ticket...
+                        Extrayendo datos del ticket de merma...
                     </h2>
                     <p className="text-gray-600">
                         Esto puede tomar unos segundos. Por favor espera.
@@ -146,11 +140,11 @@ export default function TicketReviewClient({
     }
 
     if (!extractedData) {
-        if (!ticketImageUrl) {
+        if (!ticketMermaImageUrl) {
             return (
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-                        <p className="text-gray-600 mb-4">No hay ticket de recibido para procesar.</p>
+                        <p className="text-gray-600 mb-4">No hay ticket de merma para procesar.</p>
                         <button
                             onClick={handleBack}
                             className="bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
@@ -164,18 +158,19 @@ export default function TicketReviewClient({
         return null;
     }
 
-    if (!ticketImageUrl) {
+    if (!ticketMermaImageUrl) {
         return null;
     }
 
     return (
         <TicketReview
             reportId={reportId}
-            ticketImageUrl={ticketImageUrl}
-            mermaImageUrl={mermaImageUrl}
+            ticketImageUrl={ticketMermaImageUrl}
+            mermaImageUrl={null}
             extractedData={extractedData}
             onSave={handleSave}
             onBack={handleBack}
+            title="Revisar Datos del Ticket de Merma"
         />
     );
 }
