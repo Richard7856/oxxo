@@ -8,7 +8,7 @@ import { saveTicketData, submitReport } from '@/app/conductor/actions';
 
 interface TicketReviewClientProps {
     reportId: string;
-    ticketImageUrl: string;
+    ticketImageUrl: string | null;
     mermaImageUrl: string | null;
     initialTicketData: any;
 }
@@ -26,7 +26,7 @@ export default function TicketReviewClient({
 
     useEffect(() => {
         // Si no hay datos iniciales y hay URL de ticket, extraer del ticket
-        if (!initialTicketData && ticketImageUrl && ticketImageUrl.startsWith('http')) {
+        if (!initialTicketData && ticketImageUrl && typeof ticketImageUrl === 'string' && ticketImageUrl.startsWith('http')) {
             extractTicketData();
         } else if (!ticketImageUrl) {
             // Si no hay ticket, no intentar extraer
@@ -35,6 +35,12 @@ export default function TicketReviewClient({
     }, []);
 
     const extractTicketData = async () => {
+        if (!ticketImageUrl) {
+            setError('No hay imagen de ticket disponible');
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -140,6 +146,25 @@ export default function TicketReviewClient({
     }
 
     if (!extractedData) {
+        if (!ticketImageUrl) {
+            return (
+                <div className="max-w-4xl mx-auto p-4">
+                    <div className="bg-white rounded-lg shadow-lg p-6 text-center">
+                        <p className="text-gray-600 mb-4">No hay ticket de recibido para procesar.</p>
+                        <button
+                            onClick={handleBack}
+                            className="bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+                        >
+                            Volver
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    }
+
+    if (!ticketImageUrl) {
         return null;
     }
 

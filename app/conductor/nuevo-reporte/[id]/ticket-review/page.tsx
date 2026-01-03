@@ -46,6 +46,11 @@ export default async function TicketReviewPage({
         redirect(`/conductor/nuevo-reporte/${id}/flujo?step=return_check`);
     }
 
+    // Si no hay ticket de recibido, no deberíamos estar aquí, pero por seguridad redirigir
+    if (!ticketImageUrl) {
+        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=8`);
+    }
+
     // Get existing ticket data if available
     const ticketData = (report.ticket_data as any) || null;
 
