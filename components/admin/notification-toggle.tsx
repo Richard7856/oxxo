@@ -106,7 +106,7 @@ export default function NotificationToggle({ userId }: NotificationToggleProps) 
                         enabled ? 'bg-blue-600' : 'bg-gray-200'
                     } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                     role="switch"
-                    aria-checked={enabled}
+                    aria-checked={enabled ?? false}
                 >
                     <span
                         className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
