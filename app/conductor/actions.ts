@@ -227,9 +227,6 @@ export async function saveMermaStatus(reportId: string, hasMerma: boolean) {
         return { error: 'Error al guardar el estado de merma' };
     }
 
-    return { success: true };
-}
-
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
     return { success: true };
 }
