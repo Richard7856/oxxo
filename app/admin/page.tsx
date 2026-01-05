@@ -134,9 +134,11 @@ export default async function AdminPage() {
                     </div>
                 </div>
 
-                {/* PWA and Notifications */}
-                <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <PWAInstallButton />
+                {/* PWA Install Button (flotante) */}
+                <PWAInstallButton />
+
+                {/* Push Notifications */}
+                <div className="mb-6">
                     <PushNotificationManager userId={user.id} />
                 </div>
 

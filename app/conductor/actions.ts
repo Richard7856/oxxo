@@ -188,6 +188,47 @@ export async function updateCurrentStep(reportId: string, step: string) {
         console.error('Error updating current step:', error);
         return { error: 'Error al actualizar el paso' };
     }
+}
+
+export async function saveMermaStatus(reportId: string, hasMerma: boolean) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el reporte pertenece al usuario
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id, metadata')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    // Guardar el estado de merma en metadata
+    const currentMetadata = (report.metadata as Record<string, any>) || {};
+    const updatedMetadata: Record<string, any> = {
+        ...currentMetadata,
+        has_merma: hasMerma,
+    };
+
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({ metadata: updatedMetadata })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error saving merma status:', updateError);
+        return { error: 'Error al guardar el estado de merma' };
+    }
+
+    return { success: true };
+}
 
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
     return { success: true };
@@ -564,7 +605,7 @@ export async function submitReport(reportId: string) {
     // Verificar que el reporte pertenece al usuario
     const { data: report } = await supabase
         .from('reportes')
-        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre')
+        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre, metadata')
         .eq('id', reportId)
         .eq('user_id', user.id)
         .single();
@@ -578,9 +619,16 @@ export async function submitReport(reportId: string) {
         return { error: 'El reporte ya fue enviado' };
     }
 
-    // Verificar que el ticket fue procesado (para reportes de entrega)
-    if (report.tipo_reporte === 'entrega' && !report.ticket_extraction_confirmed) {
-        return { error: 'Debes procesar el ticket antes de enviar el reporte' };
+    // Verificar que el ticket fue procesado o hay una razón de no ticket (para reportes de entrega)
+    if (report.tipo_reporte === 'entrega') {
+        const metadata = (report.metadata as Record<string, any>) || {};
+        const hasNoTicketReason = metadata.no_ticket_reason;
+        const hasTicketConfirmed = report.ticket_extraction_confirmed;
+        
+        // Debe tener o ticket confirmado o razón de no ticket
+        if (!hasTicketConfirmed && !hasNoTicketReason) {
+            return { error: 'Debes procesar el ticket o indicar la razón de no tener ticket antes de enviar el reporte' };
+        }
     }
 
     // Cambiar el estado a submitted
@@ -593,6 +641,7 @@ export async function submitReport(reportId: string) {
             status: 'submitted',
             submitted_at: now,
             timeout_at: timeoutAt,
+            current_step: 'submitted', // Marcar como completado
         })
         .eq('id', reportId);
 

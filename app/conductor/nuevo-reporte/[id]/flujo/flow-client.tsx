@@ -8,13 +8,14 @@ import ActionStep from '@/components/conductor/action-step';
 import IncidentCart from '@/components/conductor/incident-cart';
 import FinishStep from '@/components/conductor/finish-step';
 import ReasonUpload from '@/components/conductor/reason-upload';
-import { uploadEvidence, updateCurrentStep, submitReport } from '@/app/conductor/actions';
+import { uploadEvidence, updateCurrentStep, submitReport, saveMermaStatus } from '@/app/conductor/actions';
 
 interface FlowClientProps {
     reportId: string;
     reportType: string;
     initialEvidence: Record<string, string>;
     initialStep: string;
+    metadata?: Record<string, any>;
 }
 
 export default function FlowClient({
@@ -22,6 +23,7 @@ export default function FlowClient({
     reportType,
     initialEvidence,
     initialStep,
+    metadata = {},
 }: FlowClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -118,8 +120,14 @@ export default function FlowClient({
                 <ActionStep
                     title="¿Hay Merma?"
                     description="¿Retiraste producto caducado o dañado?" // "Merma" means waste/spoilage
-                    onYes={() => goTo('7a')}
-                    onNo={() => goTo('7b')}
+                    onYes={async () => {
+                        await saveMermaStatus(reportId, true);
+                        goTo('7a');
+                    }}
+                    onNo={async () => {
+                        await saveMermaStatus(reportId, false);
+                        goTo('7b');
+                    }}
                 />
             );
         }
@@ -196,8 +204,18 @@ export default function FlowClient({
             );
         }
 
-        // Paso 5: Preguntar si hay ticket de merma
+        // Paso 5: Preguntar si hay ticket de merma (solo si hubo merma)
         if (currentStep === '8c' || currentStep === 'ticket_merma_check') {
+            // Verificar si hubo merma desde el metadata
+            const hasMerma = metadata?.has_merma;
+            
+            // Si no hubo merma, ir directamente a finish
+            if (hasMerma === false) {
+                // Redirigir a finish sin mostrar la pregunta
+                goTo('finish');
+                return null;
+            }
+            
             return (
                 <ActionStep
                     title="¿Hay Ticket de Merma?"

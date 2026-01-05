@@ -6,8 +6,15 @@ export default function PWAInstallButton() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isInstalled, setIsInstalled] = useState(false);
     const [isSupported, setIsSupported] = useState(false);
+    const [isDismissed, setIsDismissed] = useState(false);
 
     useEffect(() => {
+        // Verificar si el usuario ya cerró el botón
+        const dismissed = localStorage.getItem('pwa-install-dismissed');
+        if (dismissed === 'true') {
+            setIsDismissed(true);
+        }
+
         // Verificar si ya está instalado
         if (window.matchMedia('(display-mode: standalone)').matches) {
             setIsInstalled(true);
@@ -31,6 +38,7 @@ export default function PWAInstallButton() {
         window.addEventListener('appinstalled', () => {
             setIsInstalled(true);
             setDeferredPrompt(null);
+            localStorage.setItem('pwa-install-dismissed', 'true');
         });
 
         return () => {
@@ -40,7 +48,8 @@ export default function PWAInstallButton() {
 
     const handleInstallClick = async () => {
         if (!deferredPrompt) {
-            alert('La instalación no está disponible en este momento. Intenta desde el menú del navegador.');
+            // Si no hay prompt, mostrar instrucciones
+            alert('Para instalar:\n\nChrome/Edge: Menú → "Instalar aplicación"\nSafari iOS: Compartir → "Añadir a pantalla de inicio"\nFirefox: Menú → "Instalar"');
             return;
         }
 
@@ -59,46 +68,48 @@ export default function PWAInstallButton() {
         setDeferredPrompt(null);
     };
 
-    if (isInstalled) {
-        return (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <p className="text-sm text-green-800 font-medium">Aplicación instalada</p>
-                </div>
-            </div>
-        );
+    const handleDismiss = () => {
+        setIsDismissed(true);
+        localStorage.setItem('pwa-install-dismissed', 'true');
+    };
+
+    // No mostrar si está instalado, no soportado, o fue cerrado
+    if (isInstalled || isDismissed || (!isSupported && !deferredPrompt)) {
+        return null;
     }
 
-    if (!isSupported || !deferredPrompt) {
-        return (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                    Para instalar esta aplicación:
-                </p>
-                <ul className="text-xs text-blue-700 mt-2 list-disc list-inside space-y-1">
-                    <li>En Chrome/Edge: Menú → "Instalar aplicación"</li>
-                    <li>En Safari iOS: Compartir → "Añadir a pantalla de inicio"</li>
-                    <li>En Firefox: Menú → "Instalar"</li>
-                </ul>
-            </div>
-        );
-    }
-
+    // Botón pequeño y discreto flotante
     return (
-        <button
-            onClick={handleInstallClick}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-        >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Instalar Aplicación
-        </button>
+        <div className="fixed bottom-4 right-4 z-50">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs">
+                <div className="flex items-start gap-2">
+                    <button
+                        onClick={handleInstallClick}
+                        className="flex-1 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Instalar App</span>
+                    </button>
+                    <button
+                        onClick={handleDismiss}
+                        className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                        aria-label="Cerrar"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                    Descarga la app para mejor experiencia
+                </p>
+            </div>
+        </div>
     );
 }
+
 
 
 

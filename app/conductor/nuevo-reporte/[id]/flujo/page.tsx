@@ -70,6 +70,7 @@ export default async function FlujoPage({
                     reportType={report.tipo_reporte || 'entrega'}
                     initialEvidence={(report.evidence as Record<string, string>) || {}}
                     initialStep={initialStep}
+                    metadata={(report.metadata as Record<string, any>) || {}}
                 />
             </div>
         </div>

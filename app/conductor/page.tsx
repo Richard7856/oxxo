@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import CancelReportButton from '@/components/conductor/cancel-report-button';
+import PWAInstallButton from '@/components/pwa-install-button';
 
 export default async function ConductorPage() {
     const supabase = await createClient();
@@ -46,6 +47,9 @@ export default async function ConductorPage() {
 
     return (
         <div className="max-w-2xl mx-auto">
+            {/* PWA Install Button */}
+            <PWAInstallButton />
+            
             {/* Active Reporte Alert - Replaces Auto Redirect */}
             {activeReporte && (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded shadow-sm">

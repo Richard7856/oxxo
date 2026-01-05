@@ -1,10 +1,30 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import LogoutButton from "@/components/logout-button";
 
 export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Si no hay sesión, redirigir a login
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Obtener el perfil del usuario para determinar su rol
+  let userRole: string | null = null;
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  userRole = profile?.role || null;
+
+  // Determinar qué tarjetas mostrar según el rol
+  const showConductor = !userRole || userRole === 'conductor' || userRole === 'administrador';
+  const showComercial = !userRole || userRole === 'comercial' || userRole === 'administrador';
+  const showAdmin = !userRole || userRole === 'administrador';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center p-4">
@@ -30,8 +50,9 @@ export default async function Home() {
         </div>
 
         {/* Role Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className={`grid gap-6 ${showConductor && showComercial && showAdmin ? 'md:grid-cols-3' : (showConductor && showComercial) || (showComercial && showAdmin) || (showConductor && showAdmin) ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
           {/* Conductor Card */}
+          {showConductor && (
           <div className="bg-white rounded-lg shadow-xl p-8 hover:shadow-2xl transition-shadow">
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
@@ -61,8 +82,10 @@ export default async function Home() {
               </Link>
             </div>
           </div>
+          )}
 
           {/* Comercial Card */}
+          {showComercial && (
           <div className="bg-white rounded-lg shadow-xl p-8 hover:shadow-2xl transition-shadow">
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4">
@@ -92,8 +115,10 @@ export default async function Home() {
               </Link>
             </div>
           </div>
+          )}
 
           {/* Admin Card */}
+          {showAdmin && (
           <div className="bg-white rounded-lg shadow-xl p-8 hover:shadow-2xl transition-shadow">
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mb-4">
@@ -124,6 +149,7 @@ export default async function Home() {
               </Link>
             </div>
           </div>
+          )}
         </div>
 
         {/* Footer Info */}
