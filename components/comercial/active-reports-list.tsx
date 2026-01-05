@@ -8,41 +8,16 @@ interface ActiveReportsListProps {
 export default async function ActiveReportsList({ userId }: ActiveReportsListProps) {
     const supabase = await createClient();
     
-    // Obtener la zona del comercial
-    const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('zona')
-        .eq('id', userId)
-        .single();
-
-    if (!profile?.zona) {
-        return (
-            <div className="text-sm text-gray-600">
-                <p>No tienes una zona asignada. Contacta al administrador.</p>
-                <p className="text-xs mt-2 text-gray-500">Tu zona actual: {profile?.zona || 'No asignada'}</p>
-            </div>
-        );
-    }
-
-    // Obtener reportes activos de la zona del comercial
-    // Nota: RLS debería filtrar automáticamente, pero también filtramos explícitamente por zona
+    // Obtener todos los reportes activos (sin filtrar por zona, todos son CDMX)
     const { data: reportes, error } = await supabase
         .from('reportes')
         .select('*')
-        .eq('store_zona', profile.zona)
         .in('status', ['draft', 'submitted', 'resolved_by_driver'])
         .order('created_at', { ascending: false })
         .limit(20);
 
-    // Debug: mostrar información útil
     if (error) {
         console.error('Error fetching reports:', error);
-        console.error('Commercial zona:', profile.zona);
-    }
-
-    if (error) {
-        console.error('Error fetching reports:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
         return (
             <div className="text-sm text-red-600">
                 <p>Error al cargar los reportes. Intenta recargar la página.</p>
@@ -73,11 +48,7 @@ export default async function ActiveReportsList({ userId }: ActiveReportsListPro
     if (!reportes || reportes.length === 0) {
         return (
             <div className="text-sm text-gray-600">
-                <p>No hay reportes activos en tu zona en este momento.</p>
-                <p className="text-xs mt-2 text-gray-500">
-                    Tu zona: <strong>{profile.zona}</strong> | 
-                    Buscando reportes con store_zona: <strong>{profile.zona}</strong>
-                </p>
+                <p>No hay reportes activos en este momento.</p>
             </div>
         );
     }

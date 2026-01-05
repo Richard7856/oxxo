@@ -8,37 +8,13 @@ interface CompletedReportsListProps {
 export default async function CompletedReportsList({ userId }: CompletedReportsListProps) {
     const supabase = await createClient();
     
-    // Obtener la zona del comercial
-    const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('zona')
-        .eq('id', userId)
-        .single();
-
-    if (!profile?.zona) {
-        return (
-            <div className="text-sm text-gray-600">
-                <p>No tienes una zona asignada. Contacta al administrador.</p>
-                <p className="text-xs mt-2 text-gray-500">Tu zona actual: {profile?.zona || 'No asignada'}</p>
-            </div>
-        );
-    }
-
-    // Obtener reportes cerrados/completados de la zona del comercial
-    // Nota: RLS debería filtrar automáticamente, pero también filtramos explícitamente por zona
+    // Obtener todos los reportes cerrados/completados (sin filtrar por zona, todos son CDMX)
     const { data: reportes, error } = await supabase
         .from('reportes')
         .select('*')
-        .eq('store_zona', profile.zona)
         .in('status', ['completed', 'timed_out', 'archived'])
         .order('created_at', { ascending: false })
         .limit(50);
-
-    // Debug: mostrar información útil
-    if (error) {
-        console.error('Error fetching completed reports:', error);
-        console.error('Commercial zona:', profile.zona);
-    }
 
     if (error) {
         console.error('Error fetching completed reports:', error);
@@ -71,11 +47,7 @@ export default async function CompletedReportsList({ userId }: CompletedReportsL
     if (!reportes || reportes.length === 0) {
         return (
             <div className="text-sm text-gray-600">
-                <p>No hay reportes cerrados en tu zona.</p>
-                <p className="text-xs mt-2 text-gray-500">
-                    Tu zona: <strong>{profile.zona}</strong> | 
-                    Buscando reportes con store_zona: <strong>{profile.zona}</strong>
-                </p>
+                <p>No hay reportes cerrados.</p>
             </div>
         );
     }

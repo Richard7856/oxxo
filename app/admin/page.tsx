@@ -7,6 +7,7 @@ import PWAInstallButton from '@/components/pwa-install-button';
 import PushNotificationManager from '@/components/push-notification-manager';
 import AdminActiveReportsList from '@/components/admin/admin-active-reports-list';
 import AdminCompletedReportsList from '@/components/admin/admin-completed-reports-list';
+import NotificationToggle from '@/components/admin/notification-toggle';
 
 export default async function AdminPage() {
     const supabase = await createClient();
@@ -140,6 +141,11 @@ export default async function AdminPage() {
                 {/* Push Notifications */}
                 <div className="mb-6">
                     <PushNotificationManager userId={user.id} />
+                </div>
+
+                {/* Notification Toggle for Admins */}
+                <div className="mb-6">
+                    <NotificationToggle userId={user.id} />
                 </div>
 
                 {/* Zonas */}

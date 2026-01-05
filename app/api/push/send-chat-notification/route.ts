@@ -62,19 +62,31 @@ export async function POST(request: NextRequest) {
             timeRemaining = '20m'; // Default si no hay timeout_at
         }
 
-        // Obtener comerciales de la misma zona
-        const { data: comerciales } = await supabase
+        // Obtener todos los comerciales y admins (sin filtrar por zona)
+        const { data: usuarios } = await supabase
             .from('user_profiles')
-            .select('id')
-            .eq('role', 'comercial')
-            .eq('zona', report.store_zona);
+            .select('id, role, metadata')
+            .in('role', ['comercial', 'administrador']);
+        
+        // Filtrar usuarios que tengan notificaciones desactivadas
+        const usuariosConNotificaciones = usuarios?.filter(u => {
+            const metadata = (u.metadata as Record<string, any>) || {};
+            // Comerciales: notificaciones activadas por defecto
+            // Admins: solo si tienen notifications_enabled = true explícitamente
+            if (u.role === 'comercial') {
+                return metadata.notifications_enabled !== false;
+            } else if (u.role === 'administrador') {
+                return metadata.notifications_enabled === true;
+            }
+            return false;
+        }) || [];
 
-        if (!comerciales || comerciales.length === 0) {
+        if (!usuariosConNotificaciones || usuariosConNotificaciones.length === 0) {
             return NextResponse.json({ success: true, noSubscribers: true });
         }
 
-        // Obtener suscripciones push de los comerciales
-        const userIds = comerciales.map((c) => c.id);
+        // Obtener suscripciones push de los usuarios
+        const userIds = usuariosConNotificaciones.map((u) => u.id);
         const { data: subscriptions } = await supabase
             .from('push_subscriptions')
             .select('*')

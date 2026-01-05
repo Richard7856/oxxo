@@ -49,19 +49,24 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, skipped: true });
         }
 
-        // Obtener comerciales de la misma zona
+        // Obtener todos los comerciales (sin filtrar por zona)
         const { data: comerciales } = await supabase
             .from('user_profiles')
-            .select('id')
-            .eq('role', 'comercial')
-            .eq('zona', report.store_zona);
+            .select('id, metadata')
+            .eq('role', 'comercial');
+        
+        // Filtrar comerciales que tengan notificaciones desactivadas
+        const comercialesConNotificaciones = comerciales?.filter(c => {
+            const metadata = (c.metadata as Record<string, any>) || {};
+            return metadata.notifications_enabled !== false; // Por defecto activadas
+        }) || [];
 
-        if (!comerciales || comerciales.length === 0) {
+        if (!comercialesConNotificaciones || comercialesConNotificaciones.length === 0) {
             return NextResponse.json({ success: true, noSubscribers: true });
         }
 
         // Obtener suscripciones push de los comerciales
-        const userIds = comerciales.map((c) => c.id);
+        const userIds = comercialesConNotificaciones.map((c) => c.id);
         const { data: subscriptions } = await supabase
             .from('push_subscriptions')
             .select('*')

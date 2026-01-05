@@ -647,13 +647,12 @@ export async function submitReport(reportId: string) {
         return { error: 'Error al enviar el reporte' };
     }
 
-    // Enviar notificación push a comerciales de la zona
+    // Enviar notificación push a todos los comerciales (sin filtrar por zona)
     try {
         const { data: comerciales } = await supabase
             .from('user_profiles')
             .select('id')
-            .eq('role', 'comercial')
-            .eq('zona', report.store_zona);
+            .eq('role', 'comercial');
 
         if (comerciales && comerciales.length > 0) {
             // Enviar notificación a cada comercial
