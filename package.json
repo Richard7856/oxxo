@@ -10,6 +10,7 @@
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > lib/types/database.types.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.0.10",
     "@supabase/supabase-js": "^2.39.0",
     "date-fns": "^3.0.6",

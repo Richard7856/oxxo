@@ -104,9 +104,21 @@ export default function TicketReviewClient({
                 const errorMessage = errorData.error || `Error HTTP ${response.status}: ${response.statusText}`;
                 console.error('Error en la respuesta del servidor:', errorMessage);
                 
-                // Si es error de cuota, mostrar mensaje específico
-                if (response.status === 429 || errorData.quotaExceeded || errorMessage.includes('CUOTA_EXCEDIDA')) {
-                    setError('⚠️ Se excedió la cuota de la API de OpenAI. Por favor, verifica tu plan y facturación en https://platform.openai.com/account/billing. La extracción automática no está disponible en este momento.');
+                // Si es error de límite, mostrar mensaje específico
+                if (response.status === 429 || errorData.quotaExceeded || errorMessage.includes('CUOTA_EXCEDIDA') || errorMessage.includes('RATE_LIMIT') || errorMessage.includes('LÍMITE_EXCEDIDO')) {
+                    if (errorMessage.includes('RATE_LIMIT')) {
+                        // Rate limiting - sugerir esperar
+                        setError('⚠️ Demasiadas solicitudes en poco tiempo. Por favor espera unos minutos antes de intentar de nuevo. La extracción automática estará disponible en breve.');
+                    } else if (errorMessage.includes('CUOTA_EXCEDIDA') || errorMessage.includes('LÍMITE_EXCEDIDO')) {
+                        // Cuota de saldo o límite
+                        setError('⚠️ Se excedió el límite de la API de Gemini. Por favor, espera unos minutos o verifica tu cuenta en https://aistudio.google.com/app/apikey. La extracción automática no está disponible en este momento.');
+                    } else if (errorMessage.includes('API_KEY_INVALIDA')) {
+                        // API key inválida
+                        setError('⚠️ La clave de API de Gemini no es válida. Por favor, verifica la configuración del servidor.');
+                    } else {
+                        // Error 429 genérico
+                        setError(`⚠️ ${errorMessage}. La extracción automática no está disponible en este momento. Puedes ingresar los datos manualmente.`);
+                    }
                     setLoading(false);
                     return;
                 }
@@ -127,8 +139,12 @@ export default function TicketReviewClient({
             
             // Verificar si hay un error en la respuesta raw
             if (data.rawResponse && typeof data.rawResponse === 'string') {
-                if (data.rawResponse.includes('429') || data.rawResponse.includes('quota') || data.rawResponse.includes('exceeded')) {
-                    setError('⚠️ Se excedió la cuota de la API de OpenAI. Por favor, verifica tu plan y facturación en https://platform.openai.com/account/billing. La extracción automática no está disponible en este momento.');
+                if (data.rawResponse.includes('429') || data.rawResponse.includes('rate_limit') || data.rawResponse.includes('rate limit')) {
+                    setError('⚠️ Demasiadas solicitudes en poco tiempo. Por favor espera unos minutos antes de intentar de nuevo. La extracción automática estará disponible en breve.');
+                    setLoading(false);
+                    return;
+                } else if (data.rawResponse.includes('quota') || data.rawResponse.includes('exceeded') || data.rawResponse.includes('insufficient_quota') || data.rawResponse.includes('RESOURCE_EXHAUSTED')) {
+                    setError('⚠️ Se excedió el límite de la API de Gemini. Por favor, espera unos minutos o verifica tu cuenta en https://aistudio.google.com/app/apikey. La extracción automática no está disponible en este momento.');
                     setLoading(false);
                     return;
                 }
@@ -199,29 +215,30 @@ export default function TicketReviewClient({
                     <h2 className="text-xl font-semibold text-gray-900 mb-2">
                         Extrayendo datos del ticket...
                     </h2>
-                    <p className="text-gray-600">
-                        Esto puede tomar unos segundos. Por favor espera.
-                    </p>
+                        <p className="text-gray-600">
+                            Extrayendo datos del ticket con Gemini. Esto puede tomar unos segundos. Por favor espera.
+                        </p>
                 </div>
             </div>
         );
     }
 
     if (error && !extractedData) {
-        // Si es error de cuota, permitir ingresar datos manualmente
-        const isQuotaError = error.includes('cuota') || error.includes('quota') || error.includes('CUOTA_EXCEDIDA') || error.includes('exceeded');
+        // Si es error de límite o cuota, permitir ingresar datos manualmente
+        const isQuotaError = error.includes('cuota') || error.includes('quota') || error.includes('CUOTA_EXCEDIDA') || error.includes('exceeded') || error.includes('RATE_LIMIT') || error.includes('LÍMITE_EXCEDIDO');
+        const isRateLimitError = error.includes('RATE_LIMIT') || error.includes('Demasiadas solicitudes');
         
         return (
             <div className="max-w-4xl mx-auto p-4">
                 <div className="bg-white rounded-lg shadow-lg p-6">
-                    <div className={`border-l-4 p-4 mb-4 ${isQuotaError ? 'bg-yellow-50 border-yellow-400' : 'bg-red-50 border-red-400'}`}>
-                        <h3 className={`text-lg font-semibold mb-2 ${isQuotaError ? 'text-yellow-800' : 'text-red-800'}`}>
-                            {isQuotaError ? '⚠️ Cuota de API Excedida' : 'Error al extraer datos'}
+                    <div className={`border-l-4 p-4 mb-4 ${isQuotaError ? (isRateLimitError ? 'bg-blue-50 border-blue-400' : 'bg-yellow-50 border-yellow-400') : 'bg-red-50 border-red-400'}`}>
+                        <h3 className={`text-lg font-semibold mb-2 ${isQuotaError ? (isRateLimitError ? 'text-blue-800' : 'text-yellow-800') : 'text-red-800'}`}>
+                            {isRateLimitError ? '⏱️ Demasiadas Solicitudes' : isQuotaError ? '⚠️ Cuota de API Excedida' : 'Error al extraer datos'}
                         </h3>
-                        <p className={isQuotaError ? 'text-yellow-700' : 'text-red-700'}>{error}</p>
+                        <p className={isQuotaError ? (isRateLimitError ? 'text-blue-700' : 'text-yellow-700') : 'text-red-700'}>{error}</p>
                         {isQuotaError && (
-                            <div className="mt-3 text-sm text-yellow-600">
-                                <p>Puedes ingresar los datos del ticket manualmente usando el botón abajo.</p>
+                            <div className={`mt-3 text-sm ${isRateLimitError ? 'text-blue-600' : 'text-yellow-600'}`}>
+                                <p>{isRateLimitError ? 'Espera unos minutos y vuelve a intentar, o puedes ingresar los datos manualmente.' : 'Puedes ingresar los datos del ticket manualmente usando el botón abajo.'}</p>
                             </div>
                         )}
                     </div>

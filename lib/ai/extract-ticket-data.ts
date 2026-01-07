@@ -1,13 +1,11 @@
 /**
- * OpenAI Ticket Data Extraction
- * Uses GPT-4 Vision to extract structured data from ticket images
+ * Gemini Ticket Data Extraction
+ * Uses Google Gemini Vision to extract structured data from ticket images
  */
 
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export interface TicketProduct {
     clave_articulo: string; // Ejemplo: 55559, 55560, 55561
@@ -67,25 +65,36 @@ INSTRUCCIONES CRÍTICAS:
 10. IMPORTANTE: Solo devuelve el objeto JSON, sin explicaciones, sin markdown, sin texto adicional, SOLO JSON`;
 
 /**
- * Extract ticket data from an image URL
+ * Extract ticket data from an image URL using Gemini
+ * With automatic retry for rate limiting
  */
 export async function extractTicketData(
-    imageUrl: string
+    imageUrl: string,
+    retryCount: number = 0,
+    maxRetries: number = 2
 ): Promise<ExtractedTicketData> {
     try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o', // Modelo con visión
-            messages: [
-                {
-                    role: 'system',
-                    content: EXTRACTION_PROMPT,
-                },
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'text',
-                            text: `Analiza este ticket OXXO detalladamente. 
+        // Verificar que la API key esté configurada
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error('GEMINI_API_KEY no está configurada en las variables de entorno');
+        }
+
+        // Obtener el modelo de Gemini
+        const model = genAI.getGenerativeModel({ 
+            model: 'gemini-1.5-pro',
+            generationConfig: {
+                temperature: 0.1,
+                topP: 0.95,
+                topK: 40,
+                maxOutputTokens: 4000,
+                responseMimeType: 'application/json',
+            },
+        });
+
+        // Crear el prompt completo con instrucciones
+        const fullPrompt = `${EXTRACTION_PROMPT}
+
+Analiza este ticket OXXO detalladamente:
 
 1. Busca la información de la tienda: código y nombre
 2. Busca la fecha (FECHA)
@@ -98,30 +107,31 @@ export async function extractTicketData(
 5. Busca el subtotal (TOT GENERAL A VENTA o TOT. TASA FIS)
 6. Busca el total (TOTAL COSTO o total final)
 
-Lee TODO el ticket cuidadosamente y extrae cada dato.`,
-                        },
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: imageUrl,
-                                detail: 'high', // Usar 'high' para mejor calidad de lectura
-                            },
-                        },
-                    ],
-                },
-            ],
-            max_tokens: 4000,
-            temperature: 0.1, // Low temperature for more deterministic output
-            response_format: { type: 'json_object' },
-        });
+Lee TODO el ticket cuidadosamente y extrae cada dato.`;
 
-        const content = response.choices[0].message.content;
+        // Obtener la imagen en base64 con el tipo MIME correcto
+        const { base64, mimeType } = await fetchImageAsBase64(imageUrl);
+        
+        // Enviar la imagen y el prompt a Gemini
+        const result = await model.generateContent([
+            {
+                inlineData: {
+                    data: base64,
+                    mimeType: mimeType,
+                },
+            },
+            { text: fullPrompt },
+        ]);
+
+        const response = await result.response;
+        const content = response.text();
+        
         if (!content) {
-            console.error('No content in OpenAI response');
-            throw new Error('No se recibió contenido de la API de OpenAI');
+            console.error('No content in Gemini response');
+            throw new Error('No se recibió contenido de la API de Gemini');
         }
 
-        console.log('Respuesta completa de OpenAI (primeros 500 caracteres):', content.substring(0, 500));
+        console.log('Respuesta completa de Gemini (primeros 500 caracteres):', content.substring(0, 500));
         console.log('Longitud de la respuesta:', content.length);
 
         // Parse JSON from response
@@ -158,25 +168,57 @@ Lee TODO el ticket cuidadosamente y extrae cada dato.`,
         return result;
     } catch (error: any) {
         console.error('Error extracting ticket data:', error);
+        console.error('Error details:', {
+            status: error?.status,
+            message: error?.message,
+            response: error?.response?.data,
+            headers: error?.response?.headers,
+        });
         
-        // Detectar error de cuota de OpenAI
-        if (error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('quota')) {
-            console.error('OpenAI Quota Exceeded Error');
-            throw new Error('CUOTA_EXCEDIDA: Se excedió la cuota de la API de OpenAI. Por favor, verifica tu plan y facturación en https://platform.openai.com/account/billing');
+        // Detectar error 429 o rate limiting de Gemini
+        if (error?.status === 429 || error?.statusCode === 429 || error?.message?.includes('429')) {
+            const errorMessage = error?.message || '';
+            
+            // Intentar determinar si es rate limiting
+            if (errorMessage.includes('rate_limit') || errorMessage.includes('rate limit') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+                // Es rate limiting - intentar retry automático
+                if (retryCount < maxRetries) {
+                    const waitTime = 5000 * (retryCount + 1); // Backoff exponencial: 5s, 10s
+                    
+                    console.log(`Rate limit alcanzado en Gemini. Esperando ${waitTime / 1000} segundos antes de reintentar... (intento ${retryCount + 1}/${maxRetries})`);
+                    
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    
+                    // Reintentar
+                    return extractTicketData(imageUrl, retryCount + 1, maxRetries);
+                } else {
+                    throw new Error(`RATE_LIMIT: Demasiadas solicitudes a Gemini. Por favor espera unos minutos antes de intentar de nuevo.`);
+                }
+            } else {
+                // Error 429 genérico - intentar un retry más
+                if (retryCount < maxRetries) {
+                    console.log(`Error 429 genérico en Gemini. Esperando 10 segundos antes de reintentar... (intento ${retryCount + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    return extractTicketData(imageUrl, retryCount + 1, maxRetries);
+                } else {
+                    throw new Error(`LÍMITE_EXCEDIDO: Se excedió el límite de la API de Gemini. Por favor, espera unos minutos o verifica tu cuenta en https://aistudio.google.com/app/apikey`);
+                }
+            }
         }
         
-        // Si es un error de la API de OpenAI, propagarlo con más detalles
-        if (error?.response) {
-            console.error('OpenAI API Error:', error.response);
-            const statusCode = error.response?.status || error.status;
-            if (statusCode === 429) {
-                throw new Error('CUOTA_EXCEDIDA: Se excedió la cuota de la API de OpenAI. Por favor, verifica tu plan y facturación en https://platform.openai.com/account/billing');
+        // Si es un error de la API de Gemini, propagarlo con más detalles
+        if (error?.message) {
+            console.error('Gemini API Error:', error.message);
+            
+            if (error.message.includes('API key not valid') || error.message.includes('Invalid API key')) {
+                throw new Error('API_KEY_INVALIDA: La clave de API de Gemini no es válida. Por favor, verifica GEMINI_API_KEY en las variables de entorno.');
             }
-            throw new Error(`Error de la API de OpenAI (${statusCode}): ${error.message || 'Error desconocido'}`);
+            
+            throw new Error(`Error de la API de Gemini: ${error.message}`);
         }
 
         // Re-lanzar errores de parsing o otros errores críticos
-        if (error?.message && (error.message.includes('Error al procesar') || error.message.includes('CUOTA_EXCEDIDA'))) {
+        if (error?.message && (error.message.includes('Error al procesar') || error.message.includes('CUOTA_EXCEDIDA') || error.message.includes('RATE_LIMIT') || error.message.includes('LÍMITE_EXCEDIDO') || error.message.includes('API_KEY_INVALIDA'))) {
             throw error;
         }
 
@@ -240,4 +282,52 @@ export function validateTicketData(data: ExtractedTicketData): {
         isValid: errors.length === 0,
         errors,
     };
+}
+
+/**
+ * Fetch image from URL and convert to base64
+ * Works in Node.js server environment
+ * Returns both base64 string and mime type
+ */
+async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
+    try {
+        // Usar fetch nativo de Node.js (disponible en Node 18+)
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+            throw new Error(`Error al obtener la imagen: ${response.status} ${response.statusText}`);
+        }
+        
+        // Detectar el tipo MIME de la imagen
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        let mimeType = 'image/jpeg'; // Default
+        
+        if (contentType.includes('image/png')) {
+            mimeType = 'image/png';
+        } else if (contentType.includes('image/jpeg') || contentType.includes('image/jpg')) {
+            mimeType = 'image/jpeg';
+        } else if (contentType.includes('image/webp')) {
+            mimeType = 'image/webp';
+        } else if (contentType.includes('image/gif')) {
+            mimeType = 'image/gif';
+        } else {
+            // Intentar detectar por extensión de URL
+            if (imageUrl.toLowerCase().endsWith('.png')) {
+                mimeType = 'image/png';
+            } else if (imageUrl.toLowerCase().endsWith('.webp')) {
+                mimeType = 'image/webp';
+            } else if (imageUrl.toLowerCase().endsWith('.gif')) {
+                mimeType = 'image/gif';
+            }
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        // Convertir ArrayBuffer a Buffer y luego a base64
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString('base64');
+        
+        return { base64, mimeType };
+    } catch (error: any) {
+        console.error('Error fetching image:', error);
+        throw new Error(`Error al obtener la imagen: ${error.message}`);
+    }
 }
