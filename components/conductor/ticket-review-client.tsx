@@ -25,13 +25,22 @@ export default function TicketReviewClient({
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Si no hay datos iniciales y hay URL de ticket, extraer del ticket
-        if (!initialTicketData && ticketImageUrl && typeof ticketImageUrl === 'string' && ticketImageUrl.startsWith('http')) {
-            extractTicketData();
-        } else if (!ticketImageUrl) {
-            // Si no hay ticket, no intentar extraer
+        // Si hay datos iniciales, no intentar extraer
+        if (initialTicketData) {
             setLoading(false);
+            return;
         }
+
+        // Si no hay URL de ticket, no intentar extraer
+        if (!ticketImageUrl) {
+            console.log('No hay URL de ticket disponible');
+            setLoading(false);
+            return;
+        }
+
+        // Intentar extraer datos del ticket
+        console.log('Iniciando extracción de datos del ticket', { ticketImageUrl });
+        extractTicketData();
     }, []);
 
     const extractTicketData = async () => {
@@ -45,25 +54,42 @@ export default function TicketReviewClient({
         setError(null);
 
         try {
-            // La URL debe ser una URL pública de Supabase, no una URL local
-            // Si es una URL local (blob:), necesitamos obtener la URL pública
+            // La URL debe ser una URL pública de Supabase
             let imageUrl = ticketImageUrl;
+            
+            console.log('URL original del ticket:', ticketImageUrl);
             
             // Si es una URL de blob o local, intentar obtener la URL pública desde el reporte
             if (ticketImageUrl.startsWith('blob:') || !ticketImageUrl.startsWith('http')) {
+                console.log('URL no es pública, obteniendo desde el reporte...');
                 // Obtener la URL pública desde el reporte
-                const response = await fetch(`/api/reportes/${reportId}`);
-                if (response.ok) {
-                    const reportData = await response.json();
-                    const evidence = reportData.evidence || {};
+                const reportResponse = await fetch(`/api/reportes/${reportId}`);
+                if (reportResponse.ok) {
+                    const reportData = await reportResponse.json();
+                    const evidence = reportData.reporte?.evidence || reportData.evidence || {};
+                    console.log('Evidence del reporte:', evidence);
                     imageUrl = evidence['ticket_recibido'] || evidence['ticket'] || ticketImageUrl;
+                    console.log('URL obtenida del reporte:', imageUrl);
+                } else {
+                    throw new Error('No se pudo obtener la información del reporte');
                 }
             }
 
             // Asegurarse de que la URL sea accesible públicamente
             if (!imageUrl.startsWith('http')) {
-                throw new Error('La imagen debe ser una URL pública');
+                throw new Error(`La imagen debe ser una URL pública. URL recibida: ${imageUrl}`);
             }
+
+            // Verificar que la URL sea accesible (hacer un HEAD request)
+            console.log('Verificando accesibilidad de la imagen:', imageUrl);
+            try {
+                const testResponse = await fetch(imageUrl, { method: 'HEAD', mode: 'no-cors' });
+                console.log('Imagen accesible (verificación completa)');
+            } catch (testError) {
+                console.warn('Advertencia: No se pudo verificar accesibilidad de la imagen, continuando de todas formas');
+            }
+
+            console.log('Enviando solicitud de extracción con URL:', imageUrl);
 
             const response = await fetch('/api/tickets/extract', {
                 method: 'POST',
@@ -75,14 +101,62 @@ export default function TicketReviewClient({
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Error al extraer datos del ticket');
+                const errorMessage = errorData.error || `Error HTTP ${response.status}: ${response.statusText}`;
+                console.error('Error en la respuesta del servidor:', errorMessage);
+                
+                // Si es error de cuota, mostrar mensaje específico
+                if (response.status === 429 || errorData.quotaExceeded || errorMessage.includes('CUOTA_EXCEDIDA')) {
+                    setError('⚠️ Se excedió la cuota de la API de OpenAI. Por favor, verifica tu plan y facturación en https://platform.openai.com/account/billing. La extracción automática no está disponible en este momento.');
+                    setLoading(false);
+                    return;
+                }
+                
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
-            setExtractedData(result.data);
+            console.log('Respuesta completa del servidor:', result);
+            console.log('Datos extraídos recibidos:', JSON.stringify(result.data, null, 2));
+            
+            if (!result.data) {
+                throw new Error('No se recibieron datos del servidor. La respuesta fue: ' + JSON.stringify(result));
+            }
+
+            // Verificar que los datos no estén vacíos
+            const data = result.data;
+            
+            // Verificar si hay un error en la respuesta raw
+            if (data.rawResponse && typeof data.rawResponse === 'string') {
+                if (data.rawResponse.includes('429') || data.rawResponse.includes('quota') || data.rawResponse.includes('exceeded')) {
+                    setError('⚠️ Se excedió la cuota de la API de OpenAI. Por favor, verifica tu plan y facturación en https://platform.openai.com/account/billing. La extracción automática no está disponible en este momento.');
+                    setLoading(false);
+                    return;
+                }
+            }
+            
+            if (!data.productos || data.productos.length === 0) {
+                console.warn('No se extrajeron productos del ticket');
+            }
+            if (!data.codigo_tienda && !data.tienda && !data.orden_compra) {
+                console.warn('No se extrajeron datos básicos del ticket');
+            }
+
+            setExtractedData(data);
+            console.log('Datos extraídos establecidos correctamente:', {
+                codigo_tienda: data.codigo_tienda,
+                tienda: data.tienda,
+                fecha: data.fecha,
+                orden_compra: data.orden_compra,
+                productos: data.productos?.length || 0,
+                subtotal: data.subtotal,
+                total: data.total,
+                confidence: data.confidence
+            });
         } catch (err: any) {
-            setError(err.message || 'Error al procesar el ticket');
+            const errorMessage = err.message || 'Error al procesar el ticket';
             console.error('Error extracting ticket:', err);
+            setError(errorMessage);
+            // Mantener el estado de loading en false para mostrar el error
         } finally {
             setLoading(false);
         }
@@ -134,11 +208,22 @@ export default function TicketReviewClient({
     }
 
     if (error && !extractedData) {
+        // Si es error de cuota, permitir ingresar datos manualmente
+        const isQuotaError = error.includes('cuota') || error.includes('quota') || error.includes('CUOTA_EXCEDIDA') || error.includes('exceeded');
+        
         return (
             <div className="max-w-4xl mx-auto p-4">
                 <div className="bg-white rounded-lg shadow-lg p-6">
-                    <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-                        <p className="text-red-700">{error}</p>
+                    <div className={`border-l-4 p-4 mb-4 ${isQuotaError ? 'bg-yellow-50 border-yellow-400' : 'bg-red-50 border-red-400'}`}>
+                        <h3 className={`text-lg font-semibold mb-2 ${isQuotaError ? 'text-yellow-800' : 'text-red-800'}`}>
+                            {isQuotaError ? '⚠️ Cuota de API Excedida' : 'Error al extraer datos'}
+                        </h3>
+                        <p className={isQuotaError ? 'text-yellow-700' : 'text-red-700'}>{error}</p>
+                        {isQuotaError && (
+                            <div className="mt-3 text-sm text-yellow-600">
+                                <p>Puedes ingresar los datos del ticket manualmente usando el botón abajo.</p>
+                            </div>
+                        )}
                     </div>
                     <div className="flex gap-4">
                         <button
@@ -147,12 +232,35 @@ export default function TicketReviewClient({
                         >
                             Volver
                         </button>
-                        <button
-                            onClick={extractTicketData}
-                            className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                        >
-                            Reintentar
-                        </button>
+                        {isQuotaError ? (
+                            <button
+                                onClick={() => {
+                                    // Permitir ingresar datos manualmente estableciendo datos vacíos
+                                    setExtractedData({
+                                        codigo_tienda: null,
+                                        tienda: null,
+                                        fecha: null,
+                                        orden_compra: null,
+                                        productos: [],
+                                        subtotal: null,
+                                        total: null,
+                                        confidence: 0,
+                                        rawResponse: 'Manual entry due to quota exceeded',
+                                    });
+                                    setError(null);
+                                }}
+                                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                Ingresar Datos Manualmente
+                            </button>
+                        ) : (
+                            <button
+                                onClick={extractTicketData}
+                                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                Reintentar
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -175,6 +283,36 @@ export default function TicketReviewClient({
                 </div>
             );
         }
+        
+        // Si hay error o no se pudieron extraer datos
+        if (error) {
+            return (
+                <div className="max-w-4xl mx-auto p-4">
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                            <h3 className="text-lg font-semibold text-red-800 mb-2">Error al extraer datos</h3>
+                            <p className="text-red-700">{error}</p>
+                        </div>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={handleBack}
+                                className="flex-1 bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+                            >
+                                Volver
+                            </button>
+                            <button
+                                onClick={extractTicketData}
+                                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                Reintentar Extracción
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Si está cargando, ya se mostró arriba, pero por si acaso
         return null;
     }
 

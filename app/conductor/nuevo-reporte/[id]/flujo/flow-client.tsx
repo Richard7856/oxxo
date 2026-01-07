@@ -52,7 +52,7 @@ export default function FlowClient({
     // --- Steps Logic ---
 
     if (reportType === 'entrega') {
-        // Flow: Arrival -> Incident? -> (Form) -> Product -> Waste? -> (Waste/Remission) -> Ticket -> TicketConfirm -> Return? -> ReturnTicket -> ReturnConfirm -> Finish
+        // Flow: Arrival -> Incident? -> (Form) -> Product -> Waste? -> (Waste) -> Ticket -> TicketConfirm -> TicketMerma? -> TicketMermaConfirm -> Finish
 
         if (currentStep === '4a' || currentStep === 'arrival_exhibit') {
             return (
@@ -126,7 +126,7 @@ export default function FlowClient({
                     }}
                     onNo={async () => {
                         await saveMermaStatus(reportId, false);
-                        goTo('7b');
+                        goTo('8'); // Ir directamente a ticket de recibido si no hay merma
                     }}
                 />
             );
@@ -140,19 +140,6 @@ export default function FlowClient({
                     stepIndicator="Paso 3 de 8"
                     initialImage={initialEvidence['waste_evidence']}
                     onImageSelected={(file) => handleUpload('waste_evidence', file)}
-                    onContinue={() => goTo('8')}
-                />
-            );
-        }
-
-        if (currentStep === '7b') { // Remission (No Waste)
-            return (
-                <EvidenceUpload
-                    title="3. Remisión"
-                    description="Foto de la remisión firmada"
-                    stepIndicator="Paso 3 de 8"
-                    initialImage={initialEvidence['remission']}
-                    onImageSelected={(file) => handleUpload('remission', file)}
                     onContinue={() => goTo('8')}
                 />
             );

@@ -93,7 +93,7 @@ export default function NotificationToggle({ userId }: NotificationToggleProps) 
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
                         Notificaciones Push
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-800">
                         {enabled
                             ? 'Recibirás notificaciones cuando los conductores envíen mensajes o creen reportes.'
                             : 'Las notificaciones están desactivadas. No recibirás alertas.'}

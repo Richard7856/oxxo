@@ -19,7 +19,11 @@ export async function GET(
             return Response.json({ error: 'Reporte no encontrado' }, { status: 404 });
         }
 
-        return Response.json({ reporte });
+        // Asegurar que evidence esté disponible en la respuesta
+        return Response.json({ 
+            reporte,
+            evidence: (reporte.evidence as Record<string, string>) || {}
+        });
     } catch (error: any) {
         return Response.json(
             { error: error.message || 'Error al obtener el reporte' },

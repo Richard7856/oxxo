@@ -121,7 +121,7 @@ export default function TicketReview({
                             type="text"
                             value={data.codigo_tienda || ''}
                             onChange={(e) => setData({ ...data, codigo_tienda: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                         />
                     </div>
                     <div>
@@ -132,7 +132,7 @@ export default function TicketReview({
                             type="text"
                             value={data.tienda || ''}
                             onChange={(e) => setData({ ...data, tienda: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                         />
                     </div>
                     <div>
@@ -144,7 +144,7 @@ export default function TicketReview({
                             value={data.fecha || ''}
                             onChange={(e) => setData({ ...data, fecha: e.target.value })}
                             placeholder="DD/MM/YYYY"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                         />
                     </div>
                     <div>
@@ -155,7 +155,7 @@ export default function TicketReview({
                             type="text"
                             value={data.orden_compra || ''}
                             onChange={(e) => setData({ ...data, orden_compra: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                         />
                     </div>
                 </div>
@@ -192,7 +192,7 @@ export default function TicketReview({
                                             type="text"
                                             value={producto.clave_articulo}
                                             onChange={(e) => handleProductChange(index, 'clave_articulo', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                                         />
                                     </div>
                                     <div>
@@ -203,7 +203,7 @@ export default function TicketReview({
                                             type="text"
                                             value={producto.descripcion}
                                             onChange={(e) => handleProductChange(index, 'descripcion', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                                         />
                                     </div>
                                     <div>
@@ -215,7 +215,7 @@ export default function TicketReview({
                                             step="0.01"
                                             value={producto.costo}
                                             onChange={(e) => handleProductChange(index, 'costo', parseFloat(e.target.value) || 0)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                                         />
                                     </div>
                                     <div>
@@ -227,7 +227,7 @@ export default function TicketReview({
                                             step="0.01"
                                             value={producto.peso}
                                             onChange={(e) => handleProductChange(index, 'peso', parseFloat(e.target.value) || 0)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                                         />
                                     </div>
                                 </div>
@@ -247,7 +247,7 @@ export default function TicketReview({
                             step="0.01"
                             value={data.subtotal || ''}
                             onChange={(e) => setData({ ...data, subtotal: parseFloat(e.target.value) || null })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                         />
                     </div>
                     <div>
@@ -259,7 +259,7 @@ export default function TicketReview({
                             step="0.01"
                             value={data.total || ''}
                             onChange={(e) => setData({ ...data, total: parseFloat(e.target.value) || null })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                         />
                     </div>
                 </div>
