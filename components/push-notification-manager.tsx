@@ -116,50 +116,110 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
 
         setIsLoading(true);
         try {
-            // Solicitar permiso de notificaciones
+            // Solicitar permiso de notificaciones PRIMERO
+            console.log('Solicitando permiso de notificaciones...');
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
                 alert('Los permisos de notificación fueron denegados');
                 setIsLoading(false);
                 return;
             }
+            console.log('Permiso de notificaciones concedido');
 
-            // Registrar service worker si no está registrado
+            // Simplificar: usar navigator.serviceWorker.ready directamente
+            // Este es el método más confiable y recomendado
+            console.log('Esperando service worker ready...');
+            
             let registration: ServiceWorkerRegistration;
             
-            // Verificar si ya hay un service worker registrado
-            const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-            if (existingRegistrations.length > 0) {
-                // Ya hay uno registrado, esperar a que esté listo
-                try {
-                    registration = await Promise.race([
-                        navigator.serviceWorker.ready,
-                        new Promise<ServiceWorkerRegistration>((_, reject) =>
-                            setTimeout(() => reject(new Error('Timeout')), 3000)
-                        )
-                    ]) as ServiceWorkerRegistration;
-                } catch (error) {
-                    console.log('Service worker existente no responde, registrando nuevo...', error);
-                    registration = await navigator.serviceWorker.register('/sw.js');
-                    // Esperar a que el nuevo service worker esté listo
-                    registration = await Promise.race([
-                        navigator.serviceWorker.ready,
-                        new Promise<ServiceWorkerRegistration>((_, reject) =>
-                            setTimeout(() => reject(new Error('Registration timeout')), 5000)
-                        )
-                    ]) as ServiceWorkerRegistration;
-                }
-            } else {
-                // No hay service worker, registrar uno nuevo
-                console.log('Registrando service worker...');
-                registration = await navigator.serviceWorker.register('/sw.js');
-                // Esperar a que esté listo (con timeout)
+            // Estrategia más simple: intentar obtener el service worker ready con timeout largo
+            // Si falla, dar una instrucción clara al usuario
+            try {
                 registration = await Promise.race([
-                    navigator.serviceWorker.ready,
-                    new Promise<ServiceWorkerRegistration>((_, reject) =>
-                        setTimeout(() => reject(new Error('Registration timeout')), 5000)
-                    )
-                ]) as ServiceWorkerRegistration;
+                    navigator.serviceWorker.ready.then(reg => {
+                        console.log('✓ Service worker ready obtenido exitosamente');
+                        return reg;
+                    }),
+                    new Promise<ServiceWorkerRegistration>((_, reject) => {
+                        setTimeout(() => {
+                            console.error('✗ Timeout esperando serviceWorker.ready');
+                            reject(new Error('TIMEOUT_READY'));
+                        }, 20000); // 20 segundos - tiempo muy generoso para móviles
+                    })
+                ]);
+            } catch (readyError: any) {
+                // Si es timeout, dar mensaje más específico
+                if (readyError?.message === 'TIMEOUT_READY') {
+                    throw new Error('El service worker tardó demasiado en estar listo. Por favor:\n1. Asegúrate de que la app esté instalada como PWA\n2. Recarga la página completamente\n3. Intenta de nuevo');
+                }
+                
+                // Otro error, intentar estrategia alternativa
+                console.log('serviceWorker.ready falló, intentando alternativa...', readyError);
+                
+                // Verificar registros existentes
+                const existingRegs = await navigator.serviceWorker.getRegistrations();
+                if (existingRegs.length > 0) {
+                    console.log('Usando service worker existente...');
+                    registration = existingRegs[0];
+                    
+                    // Si no está activo, esperar un poco más
+                    if (!registration.active) {
+                        console.log('Service worker no activo, esperando activación...');
+                        // Esperar hasta 10 segundos más
+                        await new Promise<void>((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                reject(new Error('El service worker no se activó después de esperar. Por favor recarga la página.'));
+                            }, 10000);
+                            
+                            // Intentar activar si está en waiting
+                            if (registration.waiting) {
+                                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                            
+                            // Escuchar cambios de estado
+                            const checkActive = () => {
+                                if (registration.active) {
+                                    clearTimeout(timeout);
+                                    resolve();
+                                }
+                            };
+                            
+                            if (registration.installing) {
+                                registration.installing.addEventListener('statechange', checkActive);
+                            }
+                            if (registration.waiting) {
+                                registration.waiting.addEventListener('statechange', checkActive);
+                            }
+                            
+                            // Verificar periódicamente
+                            const interval = setInterval(() => {
+                                if (registration.active) {
+                                    clearInterval(interval);
+                                    clearTimeout(timeout);
+                                    resolve();
+                                }
+                            }, 500);
+                            
+                            // Cleanup si se resuelve por timeout
+                            setTimeout(() => {
+                                clearInterval(interval);
+                            }, 10000);
+                        });
+                    }
+                } else {
+                    // No hay service worker - esto no debería pasar si next-pwa está funcionando
+                    throw new Error('No se encontró un service worker. La app debe estar instalada como PWA. Por favor instala la app desde el navegador y recarga la página.');
+                }
+            }
+            
+            // Verificar que tenemos un registration válido
+            if (!registration) {
+                throw new Error('No se pudo obtener el service worker. Por favor recarga la página e intenta de nuevo.');
+            }
+            
+            // Verificar pushManager
+            if (!registration.pushManager) {
+                throw new Error('El service worker no soporta push notifications. Por favor verifica que estás usando un navegador moderno.');
             }
             
             if (!registration) {
