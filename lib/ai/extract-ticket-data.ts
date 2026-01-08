@@ -5,6 +5,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// Inicializar con la API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export interface TicketProduct {
@@ -79,69 +80,206 @@ export async function extractTicketData(
             throw new Error('GEMINI_API_KEY no está configurada en las variables de entorno');
         }
 
-        // Obtener el modelo de Gemini
-        const model = genAI.getGenerativeModel({ 
-            model: 'gemini-1.5-pro',
-            generationConfig: {
-                temperature: 0.1,
-                topP: 0.95,
-                topK: 40,
-                maxOutputTokens: 4000,
-                responseMimeType: 'application/json',
-            },
-        });
-
         // Crear el prompt completo con instrucciones
-        const fullPrompt = `${EXTRACTION_PROMPT}
+        // Importante: Pedir explícitamente JSON sin markdown ni texto adicional
+        const fullPrompt = `Analiza este ticket OXXO detalladamente y devuelve SOLO un objeto JSON válido, sin explicaciones, sin markdown, sin texto adicional.
 
-Analiza este ticket OXXO detalladamente:
+${EXTRACTION_PROMPT}
 
-1. Busca la información de la tienda: código y nombre
-2. Busca la fecha (FECHA)
-3. Busca la orden de compra (ORDEN DE COMPRA)
-4. Extrae TODOS los productos de la tabla con:
-   - CLAVE de la columna CLAVE
-   - DESCRIPCION completa
-   - COSTO de la columna COSTO o PRECIO
-   - PESO de la columna UDS
-5. Busca el subtotal (TOT GENERAL A VENTA o TOT. TASA FIS)
-6. Busca el total (TOTAL COSTO o total final)
-
-Lee TODO el ticket cuidadosamente y extrae cada dato.`;
+INSTRUCCIONES FINALES:
+- Devuelve ÚNICAMENTE el objeto JSON sin código markdown
+- No uses \`\`\`json ni \`\`\` 
+- No agregues texto antes o después del JSON
+- El JSON debe ser válido y parseable directamente`;
 
         // Obtener la imagen en base64 con el tipo MIME correcto
         const { base64, mimeType } = await fetchImageAsBase64(imageUrl);
         
-        // Enviar la imagen y el prompt a Gemini
-        const result = await model.generateContent([
-            {
-                inlineData: {
-                    data: base64,
-                    mimeType: mimeType,
-                },
-            },
-            { text: fullPrompt },
-        ]);
+        // Primero, intentar listar los modelos disponibles para ver qué hay
+        let availableModels: string[] = [];
+        try {
+            const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
+            if (modelsResponse.ok) {
+                const modelsData = await modelsResponse.json();
+                availableModels = (modelsData.models || []).map((m: any) => m.name?.replace('models/', '') || '').filter(Boolean);
+                console.log('Modelos disponibles:', availableModels);
+            }
+        } catch (listError) {
+            console.warn('No se pudieron listar modelos disponibles:', listError);
+        }
+        
+        // Lista de modelos a intentar, en orden de preferencia
+        // Filtrar por los que están disponibles o usar la lista predeterminada
+        const preferredModels = [
+            'gemini-1.5-flash',
+            'gemini-1.5-pro',
+            'gemini-pro-vision',
+            'gemini-pro',
+        ];
+        
+        const modelNames = availableModels.length > 0 
+            ? preferredModels.filter(m => availableModels.includes(m))
+            : preferredModels;
+        
+        if (modelNames.length === 0 && availableModels.length > 0) {
+            // Si ninguno de los preferidos está disponible, usar el primero disponible que tenga "vision" o "flash" o "pro"
+            const fallbackModel = availableModels.find((m: string) => 
+                m.includes('vision') || m.includes('flash') || m.includes('pro')
+            ) || availableModels[0];
+            if (fallbackModel) {
+                modelNames.push(fallbackModel);
+            }
+        }
+        
+        let lastError: any = null;
+        let generationResult: any = null;
+        let usedModel: string | null = null;
+        
+        // Intentar con cada modelo hasta que uno funcione
+        for (const modelName of modelNames) {
+            try {
+                console.log(`Intentando con modelo: ${modelName}`);
+                
+                // Configuración base
+                const generationConfig: any = {
+                    temperature: 0.1,
+                    topP: 0.95,
+                    topK: 40,
+                    maxOutputTokens: 4000,
+                };
+                
+                // Solo agregar responseMimeType para modelos 1.5 que lo soporten
+                // gemini-1.5-flash y gemini-1.5-pro deberían soportarlo
+                if (modelName.includes('1.5-flash') || modelName.includes('1.5-pro')) {
+                    try {
+                        generationConfig.responseMimeType = 'application/json';
+                        console.log(`Usando responseMimeType: application/json para ${modelName}`);
+                    } catch (configError) {
+                        console.warn(`No se pudo configurar responseMimeType para ${modelName}:`, configError);
+                        // Continuar sin responseMimeType
+                    }
+                }
+                
+                const model = genAI.getGenerativeModel({ 
+                    model: modelName,
+                    generationConfig: generationConfig,
+                });
+                
+                // Enviar la imagen y el prompt a Gemini
+                generationResult = await model.generateContent([
+                    {
+                        inlineData: {
+                            data: base64,
+                            mimeType: mimeType,
+                        },
+                    },
+                    { text: fullPrompt },
+                ]);
+                
+                usedModel = modelName;
+                console.log(`Modelo ${modelName} funcionó correctamente`);
+                break; // Si funcionó, salir del loop
+            } catch (error: any) {
+                console.log(`Modelo ${modelName} falló:`, error?.message);
+                lastError = error;
+                continue; // Intentar con el siguiente modelo
+            }
+        }
+        
+        if (!generationResult) {
+            const errorMessage = `No se pudo usar ningún modelo disponible. Modelos intentados: ${modelNames.join(', ')}. ${availableModels.length > 0 ? `Modelos disponibles en tu cuenta: ${availableModels.join(', ')}.` : 'No se pudieron listar los modelos disponibles.'} Último error: ${lastError?.message || 'Desconocido'}`;
+            throw new Error(errorMessage);
+        }
 
-        const response = await result.response;
-        const content = response.text();
+        const response = await generationResult.response;
+        let content = response.text();
         
         if (!content) {
             console.error('No content in Gemini response');
             throw new Error('No se recibió contenido de la API de Gemini');
         }
 
-        console.log('Respuesta completa de Gemini (primeros 500 caracteres):', content.substring(0, 500));
-        console.log('Longitud de la respuesta:', content.length);
+        console.log('=== RESPUESTA DE GEMINI ===');
+        console.log('Longitud total:', content.length);
+        console.log('Primeros 500 caracteres:', content.substring(0, 500));
+        console.log('Últimos 500 caracteres:', content.substring(Math.max(0, content.length - 500)));
+        console.log('===========================');
+
+        // Limpiar el contenido: remover markdown code blocks si existen
+        content = content.trim();
+        
+        // Si está envuelto en markdown code blocks, extraer el JSON
+        if (content.startsWith('```json')) {
+            console.log('Encontrado código markdown con ```json, extrayendo...');
+            content = content.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+        } else if (content.startsWith('```')) {
+            console.log('Encontrado código markdown con ```, extrayendo...');
+            content = content.replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+        }
+        
+        // Intentar encontrar JSON entre llaves si hay texto adicional
+        // Primero, buscar el JSON más completo (puede haber múltiples objetos JSON)
+        let jsonContent = content.trim();
+        
+        // Intentar greedy match primero (obtiene el JSON más grande)
+        const greedyMatch = content.match(/\{[\s\S]*\}/);
+        if (greedyMatch) {
+            jsonContent = greedyMatch[0];
+        } else {
+            // Si no hay match greedy, intentar non-greedy (puede haber múltiples JSON)
+            const jsonMatches = content.match(/\{[\s\S]*?\}/g);
+            if (jsonMatches && jsonMatches.length > 0) {
+                // Usar el JSON más largo (probablemente el completo)
+                jsonContent = jsonMatches.reduce((longest, current) => 
+                    current.length > longest.length ? current : longest
+                );
+            }
+        }
+        
+        // Si aún no hay JSON, intentar buscar desde la primera llave hasta la última
+        if (!jsonContent.includes('{') || !jsonContent.includes('}')) {
+            const firstBrace = content.indexOf('{');
+            const lastBrace = content.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                jsonContent = content.substring(firstBrace, lastBrace + 1);
+            }
+        }
 
         // Parse JSON from response
         let extracted;
+        console.log('Intentando parsear JSON...');
+        console.log('JSON a parsear (primeros 300 caracteres):', jsonContent.substring(0, 300));
+        
         try {
-            extracted = JSON.parse(content);
-        } catch (parseError) {
-            console.error('Error parsing JSON response:', parseError);
-            console.error('Content received:', content);
-            throw new Error('Error al procesar la respuesta de la IA. Formato inválido.');
+            extracted = JSON.parse(jsonContent);
+            console.log('✅ JSON parseado exitosamente en el primer intento');
+        } catch (parseError: any) {
+            console.error('❌ Error parsing JSON response (primer intento):', parseError?.message);
+            console.error('JSON extraído completo:', jsonContent);
+            
+            // Intentar limpiar más agresivamente
+            try {
+                // Remover texto antes de la primera llave y después de la última
+                const firstBrace = content.indexOf('{');
+                const lastBrace = content.lastIndexOf('}');
+                console.log(`Buscando JSON entre llaves: posición { = ${firstBrace}, posición } = ${lastBrace}`);
+                
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                    const cleaned = content.substring(firstBrace, lastBrace + 1);
+                    console.log('Intentando parsear JSON limpiado (desde posición', firstBrace, 'hasta', lastBrace, ')');
+                    console.log('JSON limpiado (primeros 300 caracteres):', cleaned.substring(0, 300));
+                    extracted = JSON.parse(cleaned);
+                    console.log('✅ JSON parseado exitosamente después de limpiar');
+                } else {
+                    console.error('❌ No se encontraron llaves válidas en la respuesta');
+                    console.error('Contenido completo recibido:', content);
+                    throw new Error(`No se encontró JSON válido en la respuesta. Contenido recibido: ${content.substring(0, 200)}...`);
+                }
+            } catch (secondParseError: any) {
+                console.error('❌ Segundo intento de parseo falló:', secondParseError?.message);
+                console.error('Respuesta completa recibida:', content);
+                throw new Error(`Error al procesar la respuesta de la IA. Formato inválido. ${parseError?.message}. Respuesta: ${content.substring(0, 500)}...`);
+            }
         }
 
         const result = {
