@@ -230,7 +230,7 @@ INSTRUCCIONES FINALES:
             const jsonMatches = content.match(/\{[\s\S]*?\}/g);
             if (jsonMatches && jsonMatches.length > 0) {
                 // Usar el JSON más largo (probablemente el completo)
-                jsonContent = jsonMatches.reduce((longest, current) => 
+                jsonContent = jsonMatches.reduce((longest: string, current: string) => 
                     current.length > longest.length ? current : longest
                 );
             }
