@@ -150,9 +150,10 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
             
             // Paso 7: Crear nueva suscripción push
             console.log('[Push] Creando nueva suscripción...');
+            const vapidKeyArray = urlBase64ToUint8Array(vapidPublicKey);
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                applicationServerKey: vapidKeyArray as BufferSource,
             });
             console.log('[Push] Suscripción creada:', subscription.endpoint);
 
