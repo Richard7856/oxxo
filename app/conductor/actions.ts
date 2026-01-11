@@ -285,25 +285,32 @@ export async function initializeChat(reportId: string) {
         }
     }
 
+    // Verificar si ya existe un mensaje de resumen del reporte
+    const { data: existingMessages } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('reporte_id', reportId)
+        .eq('sender', 'system')
+        .limit(1);
+
+    // Si no hay mensaje de resumen, crear uno automáticamente
+    if (!existingMessages || existingMessages.length === 0) {
+        await createReportSummaryMessage(reportId, report, supabase);
+    }
+
     // Enviar notificación push al comercial
     try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+        console.log('[Chat Notification] Enviando notificación para reporte:', reportId);
+        const { sendChatNotification } = await import('@/lib/push/send-chat-notification');
+        const result = await sendChatNotification(reportId);
         
-        await fetch(`${baseUrl}/api/push/send-chat-notification`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                reportId,
-                action: 'chat_started',
-            }),
-        }).catch((err) => {
-            console.error('Error sending chat notification:', err);
-        });
+        if (result.error) {
+            console.error('[Chat Notification] Error:', result.error);
+        } else {
+            console.log('[Chat Notification] Notificación enviada:', result);
+        }
     } catch (err) {
-        console.error('Error in chat notification:', err);
+        console.error('[Chat Notification] Error enviando notificación:', err);
     }
 
     revalidatePath(`/conductor/chat/${reportId}`);
@@ -312,6 +319,104 @@ export async function initializeChat(reportId: string) {
         timeoutAt: updateData.timeout_at || report.timeout_at,
         submittedAt: updateData.submitted_at || report.submitted_at 
     };
+}
+
+// Función para crear mensaje de resumen del reporte
+async function createReportSummaryMessage(reportId: string, report: any, supabase: any) {
+    try {
+        const tipoReporteLabels: Record<string, string> = {
+            rechazo_completo: 'Rechazo Completo',
+            rechazo_parcial: 'Rechazo Parcial',
+            devolucion: 'Devolución',
+            faltante: 'Faltante',
+            sobrante: 'Sobrante',
+            entrega: 'Entrega Normal',
+            tienda_cerrada: 'Tienda Cerrada',
+            bascula: 'Bascula',
+        };
+
+        const tipoReporteLabel = report.tipo_reporte 
+            ? tipoReporteLabels[report.tipo_reporte] || report.tipo_reporte 
+            : 'Reporte';
+
+        let summaryText = `📋 Resumen del Reporte: ${tipoReporteLabel}\n\n`;
+        summaryText += `📍 Tienda: ${report.store_nombre} (${report.store_codigo})\n`;
+        
+        if (report.motivo) {
+            summaryText += `📝 Motivo: ${report.motivo}\n`;
+        }
+
+        // Agregar detalles de rechazo si existen
+        if (report.rechazo_details && typeof report.rechazo_details === 'object') {
+            const rechazo = report.rechazo_details as any;
+            if (rechazo.productos && Array.isArray(rechazo.productos) && rechazo.productos.length > 0) {
+                summaryText += `\n🛒 Productos rechazados:\n`;
+                rechazo.productos.forEach((prod: string) => {
+                    summaryText += `  • ${prod}\n`;
+                });
+            }
+            if (rechazo.observaciones) {
+                summaryText += `\n💬 Observaciones: ${rechazo.observaciones}\n`;
+            }
+        }
+
+        // Agregar información del ticket si existe
+        if (report.ticket_data && typeof report.ticket_data === 'object') {
+            const ticket = report.ticket_data as any;
+            summaryText += `\n🎫 Información del Ticket:\n`;
+            if (ticket.numero) summaryText += `  • Número: ${ticket.numero}\n`;
+            if (ticket.fecha) summaryText += `  • Fecha: ${ticket.fecha}\n`;
+            if (ticket.total) summaryText += `  • Total: $${ticket.total}\n`;
+        }
+
+        // Insertar mensaje de resumen
+        const { error: messageError } = await supabase.from('messages').insert({
+            reporte_id: reportId,
+            sender: 'system',
+            sender_user_id: null,
+            text: summaryText,
+            image_url: null,
+        });
+
+        if (messageError) {
+            console.error('Error creating report summary message:', messageError);
+        }
+
+        // Insertar imágenes de evidencia como mensajes separados si existen
+        if (report.evidence && typeof report.evidence === 'object') {
+            const evidence = report.evidence as Record<string, string>;
+            const evidenceKeys = ['ticket_recibido', 'ticket', 'ticket_merma', 'incident_photo'];
+            
+            for (const key of evidenceKeys) {
+                if (evidence[key]) {
+                    await supabase.from('messages').insert({
+                        reporte_id: reportId,
+                        sender: 'system',
+                        sender_user_id: null,
+                        text: `📷 ${key.replace('_', ' ').toUpperCase()}`,
+                        image_url: evidence[key],
+                    }).catch((err: any) => {
+                        console.error(`Error inserting evidence image ${key}:`, err);
+                    });
+                }
+            }
+        }
+
+        // También incluir ticket_image_url si existe
+        if (report.ticket_image_url) {
+            await supabase.from('messages').insert({
+                reporte_id: reportId,
+                sender: 'system',
+                sender_user_id: null,
+                text: '📷 Imagen del Ticket',
+                image_url: report.ticket_image_url,
+            }).catch((err: any) => {
+                console.error('Error inserting ticket image:', err);
+            });
+        }
+    } catch (error) {
+        console.error('Error creating report summary:', error);
+    }
 }
 
 export async function sendMessage(reportId: string, text: string, imageUrl?: string | null) {
@@ -341,28 +446,8 @@ export async function sendMessage(reportId: string, text: string, imageUrl?: str
     }
 
     // Enviar notificación push a comerciales (en segundo plano, no bloquea)
-    try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-        
-        fetch(`${baseUrl}/api/push/send`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                reportId,
-                messageText: text,
-                sender: 'user',
-            }),
-        }).catch((err) => {
-            // Silenciar errores de notificaciones para no bloquear el envío del mensaje
-            console.error('Error sending push notification:', err);
-        });
-    } catch (err) {
-        // Ignorar errores de notificaciones
-        console.error('Error in push notification:', err);
-    }
+    // Nota: Las notificaciones push se envían cuando se inicia el chat, no por cada mensaje
+    // Este código puede ser removido o se puede implementar si se desea notificar por cada mensaje
 
     revalidatePath(`/conductor/chat/${reportId}`);
     return { success: true };

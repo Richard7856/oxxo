@@ -77,11 +77,27 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
     async function getVapidPublicKey(): Promise<string> {
         try {
             const response = await fetch('/api/push/vapid-public-key');
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('[Push] Error en respuesta VAPID:', response.status, errorData);
+                throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+            }
+            
             const data = await response.json();
+            
+            if (!data.publicKey) {
+                console.error('[Push] No se recibió publicKey en la respuesta:', data);
+                throw new Error('El servidor no devolvió la clave VAPID');
+            }
+            
             return data.publicKey;
-        } catch (error) {
-            console.error('Error getting VAPID key:', error);
-            throw error;
+        } catch (error: any) {
+            console.error('[Push] Error getting VAPID key:', error);
+            if (error.message) {
+                throw error;
+            }
+            throw new Error('Error al obtener la clave VAPID del servidor');
         }
     }
 

@@ -29,10 +29,10 @@ export default async function CommercialChatPage({
         redirect('/');
     }
 
-    // Get report info
+    // Get report info with all necessary fields
     const { data: report } = await supabase
         .from('reportes')
-        .select('*')
+        .select('id, store_nombre, store_codigo, store_zona, status, tipo_reporte, conductor_nombre, created_at, timeout_at, motivo, rechazo_details, ticket_data, ticket_image_url')
         .eq('id', id)
         .single();
 

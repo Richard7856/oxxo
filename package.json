@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
+    "postbuild": "node scripts/inject-push-handler.js",
     "start": "next start",
     "lint": "next lint",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > lib/types/database.types.ts"

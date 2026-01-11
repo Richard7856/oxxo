@@ -26,6 +26,10 @@ interface CommercialChatInterfaceProps {
         conductor_nombre: string;
         created_at: string;
         timeout_at: string | null;
+        motivo: string | null;
+        rechazo_details: any;
+        ticket_data: any;
+        ticket_image_url: string | null;
     };
     initialMessages: Message[];
 }
@@ -211,11 +215,24 @@ export default function CommercialChatInterface({
     };
     const statusInfo = statusLabels[report.status] || { label: report.status, color: 'bg-gray-100 text-gray-800' };
 
+    const tipoReporteLabels: Record<string, string> = {
+        rechazo_completo: 'Rechazo Completo',
+        rechazo_parcial: 'Rechazo Parcial',
+        devolucion: 'Devolución',
+        faltante: 'Faltante',
+        sobrante: 'Sobrante',
+        entrega: 'Entrega Normal',
+        tienda_cerrada: 'Tienda Cerrada',
+        bascula: 'Bascula',
+    };
+
+    const tipoReporteLabel = report.tipo_reporte ? tipoReporteLabels[report.tipo_reporte] || report.tipo_reporte : 'No especificado';
+
     return (
         <div className="flex flex-col h-[calc(100vh-12rem)]">
             {/* Report Info */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                     <div>
                         <h2 className="font-semibold text-gray-900">{report.store_nombre}</h2>
                         <p className="text-sm text-gray-600">Código: {report.store_codigo}</p>
@@ -224,9 +241,71 @@ export default function CommercialChatInterface({
                         {statusInfo.label}
                     </span>
                 </div>
-                <div className="text-sm text-gray-600 space-y-1">
+                
+                {/* Tipo de Reporte destacado */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                        📋 Tipo de Reporte: {tipoReporteLabel}
+                    </p>
+                    {report.motivo && (
+                        <p className="text-sm text-blue-800 mt-1">
+                            <span className="font-medium">Motivo:</span> {report.motivo}
+                        </p>
+                    )}
+                </div>
+
+                {/* Detalles de rechazo si aplica */}
+                {report.rechazo_details && typeof report.rechazo_details === 'object' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                        <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Detalles del Rechazo:</p>
+                        {report.rechazo_details.productos && Array.isArray(report.rechazo_details.productos) && report.rechazo_details.productos.length > 0 && (
+                            <div className="mb-2">
+                                <p className="text-xs font-medium text-yellow-800 mb-1">Productos rechazados:</p>
+                                <ul className="list-disc list-inside text-xs text-yellow-700">
+                                    {report.rechazo_details.productos.map((prod: string, idx: number) => (
+                                        <li key={idx}>{prod}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        {report.rechazo_details.observaciones && (
+                            <p className="text-xs text-yellow-800">
+                                <span className="font-medium">Observaciones:</span> {report.rechazo_details.observaciones}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Información del ticket si existe */}
+                {report.ticket_data && typeof report.ticket_data === 'object' && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                        <p className="text-sm font-semibold text-green-900 mb-2">🎫 Información del Ticket:</p>
+                        <div className="text-xs text-green-800 space-y-1">
+                            {report.ticket_data.numero && (
+                                <p><span className="font-medium">Número:</span> {report.ticket_data.numero}</p>
+                            )}
+                            {report.ticket_data.fecha && (
+                                <p><span className="font-medium">Fecha:</span> {report.ticket_data.fecha}</p>
+                            )}
+                            {report.ticket_data.total && (
+                                <p><span className="font-medium">Total:</span> ${report.ticket_data.total}</p>
+                            )}
+                        </div>
+                        {report.ticket_image_url && (
+                            <a 
+                                href={report.ticket_image_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-green-700 underline mt-2 inline-block"
+                            >
+                                Ver imagen del ticket →
+                            </a>
+                        )}
+                    </div>
+                )}
+
+                <div className="text-sm text-gray-600 space-y-1 border-t pt-3 mt-3">
                     <p><span className="font-medium">Conductor:</span> {report.conductor_nombre}</p>
-                    <p><span className="font-medium">Tipo:</span> {report.tipo_reporte || 'N/A'}</p>
                     <p><span className="font-medium">Creado:</span> {new Date(report.created_at).toLocaleString('es-MX')}</p>
                 </div>
             </div>

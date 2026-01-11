@@ -148,7 +148,14 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
             }
 
             // Enviar mensaje con texto e imagen
-            await sendMessage(reportId, newMessage || '', imageUrl);
+            const result = await sendMessage(reportId, newMessage || '', imageUrl);
+            if (result?.error) {
+                alert(result.error);
+                return;
+            }
+            
+            // El mensaje se agregará automáticamente via realtime subscription
+            // Solo limpiamos el input
             setNewMessage('');
             setSelectedImage(null);
             setImagePreview(null);
@@ -157,7 +164,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Error al enviar mensaje');
+            alert('Error al enviar mensaje. Por favor intenta de nuevo.');
         } finally {
             setSending(false);
             setUploadingImage(false);
