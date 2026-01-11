@@ -314,7 +314,7 @@ export async function initializeChat(reportId: string) {
     };
 }
 
-export async function sendMessage(reportId: string, text: string) {
+export async function sendMessage(reportId: string, text: string, imageUrl?: string | null) {
     const supabase = await createClient();
     const {
         data: { user },
@@ -322,11 +322,17 @@ export async function sendMessage(reportId: string, text: string) {
 
     if (!user) return { error: 'No autorizado' };
 
+    // Validar que al menos hay texto o imagen
+    if (!text?.trim() && !imageUrl) {
+        return { error: 'El mensaje debe tener texto o una imagen' };
+    }
+
     const { error } = await supabase.from('messages').insert({
         reporte_id: reportId,
         sender: 'user',
         sender_user_id: user.id,
-        text: text,
+        text: text || null,
+        image_url: imageUrl || null,
     });
 
     if (error) {
@@ -360,6 +366,60 @@ export async function sendMessage(reportId: string, text: string) {
 
     revalidatePath(`/conductor/chat/${reportId}`);
     return { success: true };
+}
+
+export async function uploadChatImage(reportId: string, formData: FormData) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    const file = formData.get('file') as File;
+    if (!file) {
+        return { error: 'No se proporcionó un archivo' };
+    }
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+        return { error: 'El archivo debe ser una imagen' };
+    }
+
+    // Validar tamaño (máximo 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+        return { error: 'La imagen es demasiado grande (máximo 10MB)' };
+    }
+
+    // Generar nombre único para el archivo
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${reportId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `chat-images/${fileName}`;
+
+    // Subir archivo a Supabase Storage
+    const { error: uploadError } = await supabase.storage
+        .from('reportes')
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+        });
+
+    if (uploadError) {
+        console.error('Upload Error:', uploadError);
+        return { error: 'Error al subir la imagen' };
+    }
+
+    // Obtener URL pública
+    const { data: urlData } = supabase.storage
+        .from('reportes')
+        .getPublicUrl(filePath);
+
+    if (!urlData?.publicUrl) {
+        return { error: 'Error al obtener la URL de la imagen' };
+    }
+
+    return { success: true, url: urlData.publicUrl };
 }
 
 export async function submitIncidentReport(reportId: string, incidents: any[]) {

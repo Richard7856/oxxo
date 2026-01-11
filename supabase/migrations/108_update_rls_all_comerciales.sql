@@ -37,3 +37,4 @@ CREATE POLICY "Comerciales can view all processed tickets"
     )
   );
 
+

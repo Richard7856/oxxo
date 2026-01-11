@@ -30,3 +30,4 @@ COMMENT ON COLUMN push_subscriptions.auth IS 'Authentication secret';
 
 
 
+

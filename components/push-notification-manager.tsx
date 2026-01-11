@@ -33,23 +33,11 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
 
             setIsSupported(true);
             
-            // Intentar verificar suscripción, pero no bloquear si falla
-            // Usar timeout para asegurar que no se quede pensando
-            const checkWithTimeout = Promise.race([
-                checkSubscription(),
-                new Promise<void>((resolve) => {
-                    setTimeout(() => {
-                        console.warn('Timeout al verificar suscripción');
-                        resolve();
-                    }, 3000);
-                })
-            ]);
-
+            // Verificar suscripción sin timeout - es rápido normalmente
             try {
-                await checkWithTimeout;
+                await checkSubscription();
             } catch (error) {
-                console.warn('Error al verificar suscripción inicial:', error);
-                // No establecer isSubscribed, dejar que el usuario intente activar
+                console.warn('[Push] Error al verificar suscripción inicial:', error);
             } finally {
                 setIsChecking(false);
             }
@@ -76,38 +64,31 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
         }
 
         try {
-            // Intentar obtener registros (sin timeout, es rápido normalmente)
+            console.log('[Push] Verificando suscripción existente...');
             const registrations = await navigator.serviceWorker.getRegistrations();
             
             if (registrations.length === 0) {
-                console.log('No hay service workers registrados');
+                console.log('[Push] No hay service workers registrados');
                 setIsSubscribed(false);
                 return;
             }
 
-            // Intentar obtener service worker ready con timeout
-            const readyPromise = navigator.serviceWorker.ready;
+            const registration = await navigator.serviceWorker.ready;
+            console.log('[Push] Service worker ready para verificar suscripción');
             
-            // Timeout de 5 segundos
-            const registration = await Promise.race([
-                readyPromise,
-                new Promise<ServiceWorkerRegistration>((_, reject) =>
-                    setTimeout(() => reject(new Error('Service worker timeout')), 5000)
-                )
-            ]) as ServiceWorkerRegistration;
-            
-            if (!registration || !registration.pushManager) {
-                console.log('Service worker no tiene pushManager');
+            if (!registration?.pushManager) {
+                console.log('[Push] Service worker no tiene pushManager');
                 setIsSubscribed(false);
                 return;
             }
 
             const subscription = await registration.pushManager.getSubscription();
-            setIsSubscribed(!!subscription);
+            const isSubscribed = !!subscription;
+            console.log('[Push] Estado de suscripción:', isSubscribed ? 'suscrito' : 'no suscrito');
+            setIsSubscribed(isSubscribed);
         } catch (error: any) {
-            console.warn('Error checking subscription:', error?.message || error);
+            console.warn('[Push] Error verificando suscripción:', error?.message || error);
             setIsSubscribed(false);
-            // No lanzar error, solo dejar que el usuario intente activar
         }
     }
 
@@ -116,133 +97,78 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
 
         setIsLoading(true);
         try {
-            // Solicitar permiso de notificaciones PRIMERO
-            console.log('Solicitando permiso de notificaciones...');
+            // Paso 1: Solicitar permiso de notificaciones
+            console.log('[Push] Solicitando permiso de notificaciones...');
             const permission = await Notification.requestPermission();
+            console.log('[Push] Permiso:', permission);
+            
             if (permission !== 'granted') {
-                alert('Los permisos de notificación fueron denegados');
+                alert('Los permisos de notificación fueron denegados. Por favor, habilita las notificaciones en la configuración del navegador.');
                 setIsLoading(false);
                 return;
             }
-            console.log('Permiso de notificaciones concedido');
 
-            // Simplificar: usar navigator.serviceWorker.ready directamente
-            // Este es el método más confiable y recomendado
-            console.log('Esperando service worker ready...');
+            // Paso 2: Verificar que hay service workers registrados
+            console.log('[Push] Verificando service workers...');
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            console.log('[Push] Service workers encontrados:', registrations.length);
             
-            let registration: ServiceWorkerRegistration;
-            
-            // Estrategia más simple: intentar obtener el service worker ready con timeout largo
-            // Si falla, dar una instrucción clara al usuario
-            try {
-                registration = await Promise.race([
-                    navigator.serviceWorker.ready.then(reg => {
-                        console.log('✓ Service worker ready obtenido exitosamente');
-                        return reg;
-                    }),
-                    new Promise<ServiceWorkerRegistration>((_, reject) => {
-                        setTimeout(() => {
-                            console.error('✗ Timeout esperando serviceWorker.ready');
-                            reject(new Error('TIMEOUT_READY'));
-                        }, 20000); // 20 segundos - tiempo muy generoso para móviles
-                    })
-                ]);
-            } catch (readyError: any) {
-                // Si es timeout, dar mensaje más específico
-                if (readyError?.message === 'TIMEOUT_READY') {
-                    throw new Error('El service worker tardó demasiado en estar listo. Por favor:\n1. Asegúrate de que la app esté instalada como PWA\n2. Recarga la página completamente\n3. Intenta de nuevo');
-                }
-                
-                // Otro error, intentar estrategia alternativa
-                console.log('serviceWorker.ready falló, intentando alternativa...', readyError);
-                
-                // Verificar registros existentes
-                const existingRegs = await navigator.serviceWorker.getRegistrations();
-                if (existingRegs.length > 0) {
-                    console.log('Usando service worker existente...');
-                    registration = existingRegs[0];
-                    
-                    // Si no está activo, esperar un poco más
-                    if (!registration.active) {
-                        console.log('Service worker no activo, esperando activación...');
-                        // Esperar hasta 10 segundos más
-                        await new Promise<void>((resolve, reject) => {
-                            const timeout = setTimeout(() => {
-                                reject(new Error('El service worker no se activó después de esperar. Por favor recarga la página.'));
-                            }, 10000);
-                            
-                            // Intentar activar si está en waiting
-                            if (registration.waiting) {
-                                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                            }
-                            
-                            // Escuchar cambios de estado
-                            const checkActive = () => {
-                                if (registration.active) {
-                                    clearTimeout(timeout);
-                                    resolve();
-                                }
-                            };
-                            
-                            if (registration.installing) {
-                                registration.installing.addEventListener('statechange', checkActive);
-                            }
-                            if (registration.waiting) {
-                                registration.waiting.addEventListener('statechange', checkActive);
-                            }
-                            
-                            // Verificar periódicamente
-                            const interval = setInterval(() => {
-                                if (registration.active) {
-                                    clearInterval(interval);
-                                    clearTimeout(timeout);
-                                    resolve();
-                                }
-                            }, 500);
-                            
-                            // Cleanup si se resuelve por timeout
-                            setTimeout(() => {
-                                clearInterval(interval);
-                            }, 10000);
-                        });
-                    }
-                } else {
-                    // No hay service worker - esto no debería pasar si next-pwa está funcionando
-                    throw new Error('No se encontró un service worker. La app debe estar instalada como PWA. Por favor instala la app desde el navegador y recarga la página.');
-                }
+            if (registrations.length === 0) {
+                throw new Error('No se encontró ningún service worker. Asegúrate de que la app esté instalada como PWA y recarga la página.');
             }
+
+            // Paso 3: Obtener el service worker listo
+            console.log('[Push] Esperando service worker ready...');
+            const registration = await navigator.serviceWorker.ready;
+            console.log('[Push] Service worker ready:', registration.active ? 'activo' : 'no activo');
             
-            // Verificar que tenemos un registration válido
             if (!registration) {
-                throw new Error('No se pudo obtener el service worker. Por favor recarga la página e intenta de nuevo.');
+                throw new Error('No se pudo obtener el service worker. Por favor recarga la página.');
             }
-            
-            // Verificar pushManager
+
+            // Paso 4: Verificar pushManager
             if (!registration.pushManager) {
-                throw new Error('El service worker no soporta push notifications. Por favor verifica que estás usando un navegador moderno.');
-            }
-            
-            if (!registration) {
-                throw new Error('No se pudo obtener el service worker');
+                throw new Error('El service worker no soporta push notifications. Usa un navegador moderno (Chrome, Firefox, Edge).');
             }
 
-            // Obtener la clave pública VAPID
+            // Paso 5: Obtener la clave pública VAPID
+            console.log('[Push] Obteniendo clave VAPID...');
             const vapidPublicKey = await getVapidPublicKey();
+            console.log('[Push] Clave VAPID obtenida:', vapidPublicKey ? '✓' : '✗');
+            
             if (!vapidPublicKey) {
-                throw new Error('No se pudo obtener la clave VAPID');
+                throw new Error('No se pudo obtener la clave VAPID del servidor.');
             }
             
-            // Crear suscripción push
+            // Paso 6: Verificar si ya existe una suscripción
+            console.log('[Push] Verificando suscripción existente...');
+            const existingSubscription = await registration.pushManager.getSubscription();
+            if (existingSubscription) {
+                console.log('[Push] Ya existe una suscripción, desuscribiendo...');
+                await existingSubscription.unsubscribe();
+            }
+            
+            // Paso 7: Crear nueva suscripción push
+            console.log('[Push] Creando nueva suscripción...');
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
             });
+            console.log('[Push] Suscripción creada:', subscription.endpoint);
 
             if (!subscription) {
-                throw new Error('No se pudo crear la suscripción push');
+                throw new Error('No se pudo crear la suscripción push.');
             }
 
-            // Enviar suscripción al servidor
+            // Paso 8: Enviar suscripción al servidor
+            console.log('[Push] Enviando suscripción al servidor...');
+            const p256dh = subscription.getKey('p256dh');
+            const auth = subscription.getKey('auth');
+            
+            if (!p256dh || !auth) {
+                throw new Error('La suscripción no contiene las claves necesarias.');
+            }
+
             const response = await fetch('/api/push/subscribe', {
                 method: 'POST',
                 headers: {
@@ -251,23 +177,30 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                 body: JSON.stringify({
                     endpoint: subscription.endpoint,
                     keys: {
-                        p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
-                        auth: arrayBufferToBase64(subscription.getKey('auth')!),
+                        p256dh: arrayBufferToBase64(p256dh),
+                        auth: arrayBufferToBase64(auth),
                     },
                 }),
             });
 
+            const responseData = await response.json().catch(() => ({}));
+            console.log('[Push] Respuesta del servidor:', response.status, responseData);
+
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Error al registrar suscripción');
+                throw new Error(responseData.error || `Error del servidor: ${response.status}`);
             }
 
+            // Paso 9: Actualizar estado
             setIsSubscribed(true);
-            alert('Notificaciones activadas correctamente');
+            console.log('[Push] ✓ Notificaciones activadas correctamente');
+            alert('✓ Notificaciones activadas correctamente');
         } catch (error: any) {
-            console.error('Error requesting permission:', error);
+            console.error('[Push] Error completo:', error);
             const errorMessage = error?.message || 'Error desconocido';
-            alert(`Error al activar notificaciones: ${errorMessage}\n\nAsegúrate de que:\n- La app esté instalada como PWA\n- El navegador soporte notificaciones push\n- Tienes conexión a internet`);
+            console.error('[Push] Mensaje de error:', errorMessage);
+            console.error('[Push] Stack:', error?.stack);
+            
+            alert(`Error al activar notificaciones:\n\n${errorMessage}\n\nVerifica la consola para más detalles.`);
         } finally {
             setIsLoading(false);
         }

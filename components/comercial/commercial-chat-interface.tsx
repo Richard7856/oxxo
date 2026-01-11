@@ -3,10 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MessageSender } from '@/lib/types/database.types';
+import { uploadChatImage } from '@/app/conductor/actions';
 
 interface Message {
     id: string;
     text: string | null;
+    image_url: string | null;
     sender: MessageSender;
     sender_user_id: string | null;
     created_at: string;
@@ -70,6 +72,10 @@ export default function CommercialChatInterface({
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const supabase = createClient();
 
@@ -110,16 +116,36 @@ export default function CommercialChatInterface({
 
     async function handleSend(e?: React.FormEvent) {
         e?.preventDefault();
-        if (!newMessage.trim() || sending) return;
+        if ((!newMessage.trim() && !selectedImage) || sending || uploadingImage) return;
 
         setSending(true);
+        let imageUrl: string | null = null;
 
         try {
+            // Si hay imagen seleccionada, subirla primero
+            if (selectedImage) {
+                setUploadingImage(true);
+                const formData = new FormData();
+                formData.append('file', selectedImage);
+                
+                const uploadResult = await uploadChatImage(reportId, formData);
+                if (uploadResult.error) {
+                    alert(uploadResult.error);
+                    setSending(false);
+                    setUploadingImage(false);
+                    return;
+                }
+                imageUrl = uploadResult.url || null;
+                setUploadingImage(false);
+            }
+
+            // Enviar mensaje con texto e imagen
             const { error } = await supabase.from('messages').insert({
                 reporte_id: reportId,
-                sender: 'agent', // 'agent' es el tipo correcto según MessageSender
+                sender: 'agent',
                 sender_user_id: userId,
-                text: newMessage,
+                text: newMessage || null,
+                image_url: imageUrl,
             });
 
             if (error) {
@@ -127,12 +153,52 @@ export default function CommercialChatInterface({
                 alert('Error al enviar mensaje');
             } else {
                 setNewMessage('');
+                setSelectedImage(null);
+                setImagePreview(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
             }
         } catch (error) {
             console.error('Error sending message:', error);
             alert('Error al enviar mensaje');
         } finally {
             setSending(false);
+            setUploadingImage(false);
+        }
+    }
+
+    function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validar tipo
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen');
+            return;
+        }
+
+        // Validar tamaño (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('La imagen es demasiado grande (máximo 10MB)');
+            return;
+        }
+
+        setSelectedImage(file);
+        
+        // Crear preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeSelectedImage() {
+        setSelectedImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
         }
     }
 
@@ -200,7 +266,17 @@ export default function CommercialChatInterface({
                                                 : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
                                         }`}
                                     >
-                                        <p className="text-sm">{msg.text}</p>
+                                        {msg.image_url && (
+                                            <div className="mb-2 rounded-lg overflow-hidden">
+                                                <img
+                                                    src={msg.image_url}
+                                                    alt="Imagen del chat"
+                                                    className="max-w-full h-auto rounded-lg cursor-pointer"
+                                                    onClick={() => window.open(msg.image_url!, '_blank')}
+                                                />
+                                            </div>
+                                        )}
+                                        {msg.text && <p className="text-sm">{msg.text}</p>}
                                         <span className={`text-xs block mt-1 ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
                                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
@@ -213,22 +289,59 @@ export default function CommercialChatInterface({
                 )}
             </div>
 
+            {/* Image Preview */}
+            {imagePreview && (
+                <div className="mb-2 relative inline-block">
+                    <div className="relative rounded-lg overflow-hidden border-2 border-green-500">
+                        <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="max-w-xs max-h-48 object-contain"
+                        />
+                        <button
+                            type="button"
+                            onClick={removeSelectedImage}
+                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Input Area */}
             <form onSubmit={handleSend} className="flex gap-2">
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    disabled={isExpired || sending || uploadingImage}
+                />
+                <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isExpired || sending || uploadingImage}
+                    className="bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors flex items-center justify-center"
+                    title="Subir foto"
+                >
+                    📷
+                </button>
                 <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder={isExpired ? "Chat cerrado" : "Escribe un mensaje..."}
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 placeholder-gray-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                    disabled={isExpired || sending}
+                    disabled={isExpired || sending || uploadingImage}
                 />
                 <button
                     type="submit"
-                    disabled={!newMessage.trim() || sending || isExpired}
+                    disabled={(!newMessage.trim() && !selectedImage) || sending || isExpired || uploadingImage}
                     className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
-                    Enviar
+                    {uploadingImage ? 'Subiendo...' : 'Enviar'}
                 </button>
             </form>
         </div>

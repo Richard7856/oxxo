@@ -8,3 +8,4 @@ COMMENT ON COLUMN reportes.store_id IS 'Deprecated: Store data is stored denorma
 
 
 
+
