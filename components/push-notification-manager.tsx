@@ -12,6 +12,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
     const [isSubscribed, setIsSubscribed] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isChecking, setIsChecking] = useState(true);
+    const [isIOS, setIsIOS] = useState(false);
 
     useEffect(() => {
         // Verificar si el navegador soporta notificaciones push
@@ -21,11 +22,23 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                 return;
             }
 
+            // Detectar iOS/Safari
+            const detectedIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            setIsIOS(detectedIOS);
+
+            console.log('[Push] Detección:', { isIOS: detectedIOS, isSafari, userAgent: navigator.userAgent });
+
             // Verificar soporte básico
-            const hasSupport = 'serviceWorker' in navigator && 'PushManager' in window;
+            const hasServiceWorker = 'serviceWorker' in navigator;
+            const hasPushManager = 'PushManager' in window;
+            const hasSupport = hasServiceWorker && hasPushManager;
+            
+            console.log('[Push] Soporte:', { hasServiceWorker, hasPushManager, hasSupport });
             
             if (!hasSupport) {
-                console.log('Navegador no soporta notificaciones push');
+                console.log('[Push] Navegador no soporta notificaciones push');
                 setIsSupported(false);
                 setIsChecking(false);
                 return;
@@ -33,13 +46,28 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
 
             setIsSupported(true);
             
-            // Verificar suscripción sin timeout - es rápido normalmente
-            try {
-                await checkSubscription();
-            } catch (error) {
-                console.warn('[Push] Error al verificar suscripción inicial:', error);
-            } finally {
-                setIsChecking(false);
+            // En iOS/Safari, el service worker puede no estar disponible inmediatamente
+            // Intentar verificar/registrar después de un breve delay
+            if (detectedIOS || isSafari) {
+                console.log('[Push] Detectado iOS/Safari, esperando un momento para service worker...');
+                setTimeout(async () => {
+                    try {
+                        await checkSubscription();
+                    } catch (error) {
+                        console.warn('[Push] Error al verificar suscripción inicial:', error);
+                    } finally {
+                        setIsChecking(false);
+                    }
+                }, 1000);
+            } else {
+                // Otros navegadores: verificar inmediatamente
+                try {
+                    await checkSubscription();
+                } catch (error) {
+                    console.warn('[Push] Error al verificar suscripción inicial:', error);
+                } finally {
+                    setIsChecking(false);
+                }
             }
         };
 
@@ -110,17 +138,50 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
 
             // Paso 2: Verificar que hay service workers registrados
             console.log('[Push] Verificando service workers...');
-            const registrations = await navigator.serviceWorker.getRegistrations();
+            let registrations = await navigator.serviceWorker.getRegistrations();
             console.log('[Push] Service workers encontrados:', registrations.length);
             
+            // Si no hay registros, intentar registrar el service worker manualmente
             if (registrations.length === 0) {
-                throw new Error('No se encontró ningún service worker. Asegúrate de que la app esté instalada como PWA y recarga la página.');
+                console.log('[Push] No hay service workers, intentando registrar...');
+                try {
+                    // next-pwa registra el service worker en /sw.js
+                    const registration = await navigator.serviceWorker.register('/sw.js', {
+                        scope: '/',
+                    });
+                    console.log('[Push] Service worker registrado manualmente:', registration.scope);
+                    registrations = [registration];
+                    
+                    // Esperar a que esté listo
+                    await navigator.serviceWorker.ready;
+                    console.log('[Push] Service worker listo después de registro manual');
+                } catch (regError: any) {
+                    console.error('[Push] Error al registrar service worker:', regError);
+                    throw new Error(
+                        'No se encontró ningún service worker y no se pudo registrar uno automáticamente. ' +
+                        'Asegúrate de que la app esté instalada como PWA (desde el menú de compartir > Añadir a pantalla de inicio) ' +
+                        'y que estés usando una versión construida (npm run build && npm start), no en modo desarrollo.'
+                    );
+                }
             }
 
             // Paso 3: Obtener el service worker listo
             console.log('[Push] Esperando service worker ready...');
-            const registration = await navigator.serviceWorker.ready;
-            console.log('[Push] Service worker ready:', registration.active ? 'activo' : 'no activo');
+            let registration: ServiceWorkerRegistration;
+            
+            try {
+                registration = await navigator.serviceWorker.ready;
+                console.log('[Push] Service worker ready:', registration.active ? 'activo' : 'no activo');
+            } catch (readyError: any) {
+                console.error('[Push] Error esperando service worker ready:', readyError);
+                // Si falla, usar el primer registro disponible
+                if (registrations.length > 0) {
+                    registration = registrations[0];
+                    console.log('[Push] Usando service worker de registros disponibles');
+                } else {
+                    throw new Error('No se pudo obtener el service worker. Por favor recarga la página.');
+                }
+            }
             
             if (!registration) {
                 throw new Error('No se pudo obtener el service worker. Por favor recarga la página.');
@@ -248,9 +309,20 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                 <p className="text-sm text-gray-600 mb-2">
                     Tu navegador no soporta notificaciones push.
                 </p>
-                <p className="text-xs text-gray-500">
-                    Para activar notificaciones, asegúrate de usar un navegador moderno y que la app esté instalada como PWA.
-                </p>
+                {isIOS ? (
+                    <div className="text-xs text-gray-500 space-y-1">
+                        <p>
+                            <strong>Nota sobre iOS/Safari:</strong> Las notificaciones push en PWAs de iOS requieren iOS 16.4+ y tienen limitaciones.
+                        </p>
+                        <p>
+                            Para usar notificaciones push, considera usar Chrome, Firefox o Edge en lugar de Safari.
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-xs text-gray-500">
+                        Para activar notificaciones, asegúrate de usar un navegador moderno (Chrome, Firefox, Edge) y que la app esté instalada como PWA.
+                    </p>
+                )}
             </div>
         );
     }
