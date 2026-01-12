@@ -3,7 +3,7 @@
  * Puede ser llamada desde server actions o API routes
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import webpush from 'web-push';
 
 // Configurar VAPID keys
@@ -17,7 +17,9 @@ if (vapidPublicKey && vapidPrivateKey) {
 
 export async function sendChatNotification(reportId: string) {
     try {
-        const supabase = await createClient();
+        // Usar service role client para evitar restricciones de RLS
+        // Esto permite acceder a todas las suscripciones y perfiles
+        const supabase = createServiceRoleClient();
         
         // Obtener información del reporte
         const { data: report } = await supabase
