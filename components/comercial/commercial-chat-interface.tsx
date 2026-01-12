@@ -134,7 +134,8 @@ export default function CommercialChatInterface({
                 
                 const uploadResult = await uploadChatImage(reportId, formData);
                 if (uploadResult.error) {
-                    alert(uploadResult.error);
+                    console.error('Error uploading image:', uploadResult.error);
+                    alert(`Error al subir la imagen: ${uploadResult.error}`);
                     setSending(false);
                     setUploadingImage(false);
                     return;
@@ -154,7 +155,7 @@ export default function CommercialChatInterface({
 
             if (error) {
                 console.error('Error sending message:', error);
-                alert('Error al enviar mensaje');
+                alert(`Error al enviar mensaje: ${error.message || 'Error desconocido'}`);
             } else {
                 setNewMessage('');
                 setSelectedImage(null);
@@ -163,9 +164,10 @@ export default function CommercialChatInterface({
                     fileInputRef.current.value = '';
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error sending message:', error);
-            alert('Error al enviar mensaje');
+            const errorMessage = error?.message || 'Error desconocido al enviar el mensaje';
+            alert(`Error al enviar mensaje: ${errorMessage}`);
         } finally {
             setSending(false);
             setUploadingImage(false);

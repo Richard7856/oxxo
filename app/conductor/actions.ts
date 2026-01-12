@@ -342,22 +342,30 @@ async function createReportSummaryMessage(reportId: string, report: any, supabas
         let summaryText = `📋 Resumen del Reporte: ${tipoReporteLabel}\n\n`;
         summaryText += `📍 Tienda: ${report.store_nombre} (${report.store_codigo})\n`;
         
-        if (report.motivo) {
-            summaryText += `📝 Motivo: ${report.motivo}\n`;
-        }
-
-        // Agregar detalles de rechazo si existen
+        // Mostrar productos y motivo según el tipo de reporte
         if (report.rechazo_details && typeof report.rechazo_details === 'object') {
-            const rechazo = report.rechazo_details as any;
-            if (rechazo.productos && Array.isArray(rechazo.productos) && rechazo.productos.length > 0) {
-                summaryText += `\n🛒 Productos rechazados:\n`;
-                rechazo.productos.forEach((prod: string) => {
+            const detalles = report.rechazo_details as any;
+            
+            // Productos rechazados (para rechazo_completo, rechazo_parcial)
+            if (detalles.productos && Array.isArray(detalles.productos) && detalles.productos.length > 0) {
+                const tipoProd = report.tipo_reporte === 'faltante' ? 'Productos faltantes' :
+                                report.tipo_reporte === 'sobrante' ? 'Productos sobrantes' :
+                                'Productos rechazados';
+                summaryText += `\n🛒 ${tipoProd}:\n`;
+                detalles.productos.forEach((prod: string) => {
                     summaryText += `  • ${prod}\n`;
                 });
             }
-            if (rechazo.observaciones) {
-                summaryText += `\n💬 Observaciones: ${rechazo.observaciones}\n`;
+            
+            // Observaciones
+            if (detalles.observaciones) {
+                summaryText += `\n💬 Observaciones: ${detalles.observaciones}\n`;
             }
+        }
+        
+        // Motivo (se muestra para todos los tipos si existe)
+        if (report.motivo) {
+            summaryText += `\n📝 Motivo: ${report.motivo}\n`;
         }
 
         // Agregar información del ticket si existe
