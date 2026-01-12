@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
         const filePath = `chat-images/${fileName}`;
 
         // Subir archivo a Supabase Storage
-        // Supabase Storage puede trabajar directamente con File/Blob
+        // Usar el bucket 'evidence' que es el que se usa en otras partes del código
         const { error: uploadError } = await supabase.storage
-            .from('reportes')
+            .from('evidence')
             .upload(filePath, file, {
                 cacheControl: '3600',
                 upsert: false,
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         // Obtener URL pública
         const { data: urlData } = supabase.storage
-            .from('reportes')
+            .from('evidence')
             .getPublicUrl(filePath);
 
         if (!urlData?.publicUrl) {
