@@ -43,6 +43,8 @@ self.addEventListener('push', function(event) {
         }
     }
     
+    // Asegurar que el service worker se mantenga activo
+    // Esto es crítico para Android cuando la app está cerrada
     const promiseChain = self.registration.showNotification(notificationData.title, {
         body: notificationData.body,
         icon: notificationData.icon,
@@ -52,8 +54,16 @@ self.addEventListener('push', function(event) {
         requireInteraction: notificationData.requireInteraction,
         urgency: notificationData.urgency,
         vibrate: [200, 100, 200],
+        silent: false,
+        renotify: true,
+    }).catch(function(error) {
+        console.error('[SW] Error showing notification:', error);
+        // Re-throw para que waitUntil capture el error
+        throw error;
     });
     
+    // waitUntil asegura que el service worker se mantenga activo
+    // hasta que la notificación se muestre completamente
     event.waitUntil(promiseChain);
 });
 
