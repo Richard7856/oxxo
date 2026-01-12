@@ -3,7 +3,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-export async function closeReport(reportId: string) {
+/**
+ * Cerrar/resolver el chat desde el lado del comercial/admin
+ * Cambia el estado del reporte a 'resolved_by_driver' o 'completed' según corresponda
+ */
+export async function closeChat(reportId: string) {
     const supabase = await createClient();
     const {
         data: { user },
@@ -14,67 +18,52 @@ export async function closeReport(reportId: string) {
     // Verificar que el usuario sea comercial o administrador
     const { data: profile } = await supabase
         .from('user_profiles')
-        .select('role, zona')
+        .select('role')
         .eq('id', user.id)
         .single();
 
-    if (profile?.role !== 'comercial' && profile?.role !== 'administrador') {
-        return { error: 'Solo los comerciales y administradores pueden cerrar reportes' };
+    if (!profile || (profile.role !== 'comercial' && profile.role !== 'administrador')) {
+        return { error: 'No tienes permiso para cerrar este chat' };
     }
 
-    // Verificar que el reporte existe
-    const { data: report } = await supabase
+    // Obtener el reporte
+    const { data: report, error: fetchError } = await supabase
         .from('reportes')
-        .select('status, store_zona')
+        .select('status, tipo_reporte')
         .eq('id', reportId)
         .single();
 
-    if (!report) {
+    if (fetchError || !report) {
         return { error: 'Reporte no encontrado' };
     }
 
-    // Si es comercial, verificar que el reporte pertenece a su zona
-    // Si es administrador, puede cerrar cualquier reporte
-    if (profile.role === 'comercial' && report.store_zona !== profile.zona) {
-        return { error: 'No tienes permiso para cerrar este reporte' };
+    // Solo se puede cerrar si está en estado 'submitted' o 'resolved_by_driver'
+    if (report.status !== 'submitted' && report.status !== 'resolved_by_driver') {
+        return { error: `No se puede cerrar un reporte con estado: ${report.status}` };
     }
 
-    // Solo se pueden cerrar reportes que estén en draft, submitted o resolved_by_driver
-    // Los administradores pueden cerrar cualquier reporte (excepto completed)
-    if (profile.role === 'administrador') {
-        // Admin puede cerrar cualquier reporte excepto los ya completados
-        if (report.status === 'completed' || report.status === 'archived') {
-            return { error: 'No se puede cerrar un reporte que ya está completado o archivado' };
-        }
-    } else {
-        // Comercial solo puede cerrar reportes enviados o resueltos
-        if (report.status !== 'submitted' && report.status !== 'resolved_by_driver') {
-            return { error: 'Solo se pueden cerrar reportes en estado "Enviado" o "Resuelto por Conductor"' };
-        }
-    }
+    // Si ya está resuelto por el conductor, marcarlo como completado
+    // Si está en submitted, marcarlo como resuelto por el comercial (pero cambiamos a completed directamente)
+    const newStatus = report.status === 'resolved_by_driver' ? 'completed' : 'completed';
 
-    // Actualizar el estado a completed
+    // Actualizar el estado del reporte
     const { error: updateError } = await supabase
         .from('reportes')
         .update({
-            status: 'completed',
+            status: newStatus,
             resolved_at: new Date().toISOString(),
         })
         .eq('id', reportId);
 
     if (updateError) {
-        console.error('Error closing report:', updateError);
-        return { error: 'Error al cerrar el reporte' };
+        console.error('Error closing chat:', updateError);
+        return { error: 'Error al cerrar el chat' };
     }
 
-    // Revalidar según el rol del usuario
-    if (profile.role === 'administrador') {
-        revalidatePath(`/admin/reporte/${reportId}`);
-        revalidatePath('/admin');
-    } else {
-        revalidatePath(`/comercial/reporte/${reportId}`);
-        revalidatePath('/comercial');
-    }
+    revalidatePath(`/comercial/chat/${reportId}`);
+    revalidatePath(`/admin/chat/${reportId}`);
+    revalidatePath('/comercial');
+    revalidatePath('/admin');
+
     return { success: true };
 }
-

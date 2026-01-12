@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MessageSender } from '@/lib/types/database.types';
+import { closeChat } from '@/app/comercial/actions';
 
 interface Message {
     id: string;
@@ -78,6 +79,7 @@ export default function CommercialChatInterface({
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [closing, setClosing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const supabase = createClient();
@@ -214,6 +216,29 @@ export default function CommercialChatInterface({
         }
     }
 
+    async function handleCloseChat() {
+        if (closing) return;
+        
+        const confirmed = confirm('¿Estás seguro de que deseas cerrar este chat? El reporte se marcará como completado.');
+        if (!confirmed) return;
+
+        setClosing(true);
+        try {
+            const result = await closeChat(reportId);
+            if (result?.error) {
+                alert(result.error);
+            } else {
+                // Recargar la página para actualizar el estado
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error closing chat:', error);
+            alert('Error al cerrar el chat');
+        } finally {
+            setClosing(false);
+        }
+    }
+
     const statusLabels: Record<string, { label: string; color: string }> = {
         draft: { label: 'Borrador', color: 'bg-gray-100 text-gray-800' },
         submitted: { label: 'Enviado', color: 'bg-blue-100 text-blue-800' },
@@ -318,17 +343,30 @@ export default function CommercialChatInterface({
                 </div>
             </div>
 
-            {/* Timer */}
-            {report.timeout_at && (
-                <div className={`p-4 rounded-lg text-center mb-4 border ${isExpired ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
-                    <h3 className={`${isExpired ? 'text-red-800' : 'text-blue-800'} font-semibold mb-1 text-sm`}>
-                        {isExpired ? 'Tiempo de espera finalizado' : 'Tiempo restante'}
-                    </h3>
-                    <div className={`text-2xl font-bold ${isExpired ? 'text-red-900' : 'text-blue-900'}`}>
-                        {timeFormatted}
+            {/* Timer y Botón de Cerrar */}
+            <div className="mb-4 space-y-2">
+                {report.timeout_at && (
+                    <div className={`p-4 rounded-lg text-center border ${isExpired ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <h3 className={`${isExpired ? 'text-red-800' : 'text-blue-800'} font-semibold mb-1 text-sm`}>
+                            {isExpired ? 'Tiempo de espera finalizado' : 'Tiempo restante'}
+                        </h3>
+                        <div className={`text-2xl font-bold ${isExpired ? 'text-red-900' : 'text-blue-900'}`}>
+                            {timeFormatted}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+                
+                {/* Botón para cerrar el chat (solo si no está completado) */}
+                {(report.status === 'submitted' || report.status === 'resolved_by_driver') && (
+                    <button
+                        onClick={handleCloseChat}
+                        disabled={closing}
+                        className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        {closing ? 'Cerrando...' : '✅ Cerrar Chat'}
+                    </button>
+                )}
+            </div>
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
@@ -404,12 +442,12 @@ export default function CommercialChatInterface({
                     accept="image/*"
                     onChange={handleImageSelect}
                     className="hidden"
-                    disabled={isExpired || sending || uploadingImage}
+                    disabled={(report.status === 'completed' || isExpired) || sending || uploadingImage}
                 />
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isExpired || sending || uploadingImage}
+                    disabled={(report.status === 'completed' || isExpired) || sending || uploadingImage}
                     className="bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors flex items-center justify-center"
                     title="Subir foto"
                 >
@@ -419,13 +457,13 @@ export default function CommercialChatInterface({
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder={isExpired ? "Chat cerrado" : "Escribe un mensaje..."}
+                    placeholder={(report.status === 'completed' || isExpired) ? "Chat cerrado" : "Escribe un mensaje..."}
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 placeholder-gray-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                    disabled={isExpired || sending || uploadingImage}
+                    disabled={(report.status === 'completed' || isExpired) || sending || uploadingImage}
                 />
                 <button
                     type="submit"
-                    disabled={(!newMessage.trim() && !selectedImage) || sending || isExpired || uploadingImage}
+                    disabled={(!newMessage.trim() && !selectedImage) || sending || (report.status === 'completed' || isExpired) || uploadingImage}
                     className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
                     {uploadingImage ? 'Subiendo...' : 'Enviar'}

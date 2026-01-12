@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { closeReport } from '@/app/comercial/actions';
+import { closeChat } from '@/app/comercial/actions';
 
 interface CloseReportButtonProps {
     reportId: string;
@@ -22,7 +22,7 @@ export default function CloseReportButton({ reportId }: CloseReportButtonProps) 
         setError(null);
 
         try {
-            const result = await closeReport(reportId);
+            const result = await closeChat(reportId);
             if (result.error) {
                 setError(result.error);
             } else {
