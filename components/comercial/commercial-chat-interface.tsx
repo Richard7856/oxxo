@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MessageSender } from '@/lib/types/database.types';
-import { uploadChatImage } from '@/app/conductor/actions';
 
 interface Message {
     id: string;
@@ -131,11 +130,18 @@ export default function CommercialChatInterface({
                 setUploadingImage(true);
                 const formData = new FormData();
                 formData.append('file', selectedImage);
+                formData.append('reportId', reportId);
                 
-                const uploadResult = await uploadChatImage(reportId, formData);
-                if (uploadResult.error) {
+                const response = await fetch('/api/chat/upload-image', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const uploadResult = await response.json();
+                
+                if (!response.ok || uploadResult.error) {
                     console.error('Error uploading image:', uploadResult.error);
-                    alert(`Error al subir la imagen: ${uploadResult.error}`);
+                    alert(`Error al subir la imagen: ${uploadResult.error || 'Error desconocido'}`);
                     setSending(false);
                     setUploadingImage(false);
                     return;
