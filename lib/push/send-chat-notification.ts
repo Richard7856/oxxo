@@ -94,8 +94,10 @@ export async function sendChatNotification(reportId: string) {
             return { success: true, noSubscriptions: true };
         }
 
-        // Preparar payload de notificación con información del reporte
+        // Preparar información del reporte
         const storeName = report.store_nombre || 'Tienda';
+        const storeCode = report.store_codigo || '';
+        const conductorName = report.conductor_nombre || 'Conductor';
         const tipoReporteLabels: Record<string, string> = {
             rechazo_completo: 'Rechazo Completo',
             rechazo_parcial: 'Rechazo Parcial',
@@ -110,19 +112,8 @@ export async function sendChatNotification(reportId: string) {
             ? tipoReporteLabels[report.tipo_reporte] || report.tipo_reporte 
             : 'Reporte';
         
-        const notificationPayload = JSON.stringify({
-            title: `🚨 ${tipoReporteLabel} - ${storeName}`,
-            body: `Conductor necesita ayuda. Tiempo restante: ${timeRemaining}`,
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
-            tag: `report-${reportId}`,
-            data: {
-                url: `/comercial/chat/${reportId}`,
-                reportId,
-            },
-            requireInteraction: true,
-            urgency: 'high',
-        });
+        // Crear un mapa de usuarios para obtener el rol
+        const userRoleMap = new Map(usuariosConNotificaciones.map(u => [u.id, u.role]));
 
         console.log('[Push Notification] Enviando notificaciones a TODOS los comerciales y admins:', {
             totalSubscriptions: subscriptions.length,
@@ -133,10 +124,39 @@ export async function sendChatNotification(reportId: string) {
             nota: 'Se envían a TODOS sin filtro de zona',
         });
 
-        // Enviar notificaciones a todas las suscripciones
+        // Enviar notificaciones a todas las suscripciones con URLs personalizadas según el rol
         const results = await Promise.allSettled(
             subscriptions.map(async (subscription) => {
                 try {
+                    // Determinar la URL según el rol del usuario
+                    const userRole = userRoleMap.get(subscription.user_id);
+                    const chatUrl = userRole === 'administrador' 
+                        ? `/admin/chat/${reportId}`
+                        : `/comercial/chat/${reportId}`;
+                    
+                    // Construir el cuerpo de la notificación con más información
+                    // Mostrar tipo de reporte prominente, y tiempo si está disponible
+                    let notificationBody = '';
+                    if (timeoutAt && timeoutAt > now) {
+                        notificationBody = `${tipoReporteLabel}\n${storeName}${storeCode ? ` (${storeCode})` : ''} • ${conductorName}\n⏱️ ${timeRemaining}`;
+                    } else {
+                        notificationBody = `${tipoReporteLabel}\n${storeName}${storeCode ? ` (${storeCode})` : ''} • ${conductorName}`;
+                    }
+                    
+                    const notificationPayload = JSON.stringify({
+                        title: `🚨 ${tipoReporteLabel} - ${storeName}`,
+                        body: notificationBody,
+                        icon: '/icon-192.png',
+                        badge: '/icon-192.png',
+                        tag: `report-${reportId}`,
+                        data: {
+                            url: chatUrl,
+                            reportId,
+                        },
+                        requireInteraction: true,
+                        urgency: 'high',
+                    });
+
                     await webpush.sendNotification(
                         {
                             endpoint: subscription.endpoint,
@@ -147,7 +167,7 @@ export async function sendChatNotification(reportId: string) {
                         },
                         notificationPayload
                     );
-                    console.log('[Push Notification] Enviada exitosamente a:', subscription.id);
+                    console.log('[Push Notification] Enviada exitosamente a:', subscription.id, 'URL:', chatUrl);
                     return { success: true, subscriptionId: subscription.id };
                 } catch (error: any) {
                     console.error('[Push Notification] Error enviando a suscripción:', subscription.id, error?.statusCode, error?.message);
