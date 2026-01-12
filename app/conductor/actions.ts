@@ -841,7 +841,7 @@ export async function submitReport(reportId: string) {
     // Verificar que el reporte pertenece al usuario
     const { data: report } = await supabase
         .from('reportes')
-        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre, metadata')
+        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre, store_codigo, metadata, evidence, conductor_nombre, rechazo_details, ticket_data, ticket_image_url')
         .eq('id', reportId)
         .eq('user_id', user.id)
         .single();
@@ -886,34 +886,22 @@ export async function submitReport(reportId: string) {
         return { error: 'Error al enviar el reporte' };
     }
 
-    // Enviar notificación push a todos los comerciales (sin filtrar por zona)
+    // Inicializar el chat y enviar notificaciones usando la función compartida
     try {
-        const { data: comerciales } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('role', 'comercial');
-
-        if (comerciales && comerciales.length > 0) {
-            // Enviar notificación a cada comercial
-            comerciales.forEach((comercial) => {
-                fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/push/send-chat-notification`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        userId: comercial.id,
-                        reportId: reportId,
-                        storeName: report.store_nombre,
-                        remainingMinutes: 20,
-                    }),
-                }).catch((err) => {
-                    console.error('Error sending push notification:', err);
-                });
-            });
+        const { sendChatNotification } = await import('@/lib/push/send-chat-notification');
+        const notificationResult = await sendChatNotification(reportId);
+        
+        if (notificationResult.error) {
+            console.error('[Submit Report] Error enviando notificación:', notificationResult.error);
+        } else {
+            console.log('[Submit Report] Notificación enviada:', notificationResult);
         }
+
+        // Crear mensaje de resumen del reporte en el chat
+        await createReportSummaryMessage(reportId, report, supabase);
     } catch (err) {
-        console.error('Error in push notification:', err);
+        console.error('[Submit Report] Error inicializando chat/notificaciones:', err);
+        // Continuar aunque falle la notificación
     }
 
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
