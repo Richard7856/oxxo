@@ -147,25 +147,6 @@ export default async function ComercialPage() {
                     </div>
                 </div>
 
-                {/* RLS Info */}
-                <div className="mt-6 bg-blue-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                        Seguridad Row Level Security (RLS)
-                    </h3>
-                    <div className="text-sm text-blue-800 space-y-2">
-                        <p>
-                            <strong>✅ Implementado:</strong> Los comerciales solo pueden ver reportes
-                            de su zona asignada.
-                        </p>
-                        <p className="mt-2">
-                            <strong>Política de acceso:</strong>
-                        </p>
-                        <code className="block bg-blue-100 p-3 rounded mt-2 text-xs overflow-x-auto">
-                            WHERE EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role
-                            = 'comercial' AND zona = reportes.store_zona)
-                        </code>
-                    </div>
-                </div>
             </div>
         </div>
     );

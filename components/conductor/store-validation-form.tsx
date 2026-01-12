@@ -222,7 +222,7 @@ export default function StoreValidationForm({ userId }: { userId: string }) {
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-lg font-mono uppercase text-gray-900 placeholder-gray-500"
                         disabled={loading}
                     />
-                    <p className="mt-2 text-sm text-gray-500">
+                    <p className="mt-2 text-sm text-gray-800">
                         Formato: 2 números + 3 letras (Ej: 50CUE)
                     </p>
                 </div>

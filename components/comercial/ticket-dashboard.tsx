@@ -202,23 +202,23 @@ export default function TicketDashboard({ ticketData, incidentDetails }: TicketD
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                                     Clave
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">
                                     Descripción
                                 </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-800 uppercase tracking-wider">
                                     Peso/Unidades
                                 </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-800 uppercase tracking-wider">
                                     Costo Unit.
                                 </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-800 uppercase tracking-wider">
                                     Subtotal
                                 </th>
                                 {mermaTotal > 0 && (
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-800 uppercase tracking-wider">
                                         Merma
                                     </th>
                                 )}
@@ -256,7 +256,7 @@ export default function TicketDashboard({ ticketData, incidentDetails }: TicketD
                                                         <span className="text-xs">(${((producto.costo || 0) * mermaItem.merma).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
                                                     </>
                                                 ) : (
-                                                    <span className="text-gray-400">-</span>
+                                                    <span className="text-gray-800">-</span>
                                                 )}
                                             </td>
                                         )}

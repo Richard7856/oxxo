@@ -60,7 +60,7 @@ export default function TicketUpload({
     return (
         <div className="max-w-md mx-auto">
             {stepIndicator && (
-                <div className="text-sm text-gray-500 mb-4 text-center">{stepIndicator}</div>
+                <div className="text-sm text-gray-800 mb-4 text-center">{stepIndicator}</div>
             )}
             
             <div className="bg-white rounded-lg shadow-lg p-6">

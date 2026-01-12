@@ -69,7 +69,7 @@ export default async function NuevoReportePage() {
                         <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-600 rounded-full font-semibold">
                             2
                         </div>
-                        <span className="ml-3 font-medium text-gray-400">
+                        <span className="ml-3 font-medium text-gray-800">
                             Tipo de Reporte
                         </span>
                     </div>
@@ -78,7 +78,7 @@ export default async function NuevoReportePage() {
                         <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-600 rounded-full font-semibold">
                             3
                         </div>
-                        <span className="ml-3 font-medium text-gray-400">Evidencias</span>
+                        <span className="ml-3 font-medium text-gray-800">Evidencias</span>
                     </div>
                 </div>
             </div>

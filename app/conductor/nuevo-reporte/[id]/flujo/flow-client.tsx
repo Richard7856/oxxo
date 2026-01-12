@@ -8,7 +8,7 @@ import ActionStep from '@/components/conductor/action-step';
 import IncidentCart from '@/components/conductor/incident-cart';
 import FinishStep from '@/components/conductor/finish-step';
 import ReasonUpload from '@/components/conductor/reason-upload';
-import { uploadEvidence, updateCurrentStep, submitReport, saveMermaStatus } from '@/app/conductor/actions';
+import { uploadEvidence, updateCurrentStep, submitReport, saveMermaStatus, saveTiendaAbiertaStatus } from '@/app/conductor/actions';
 
 interface FlowClientProps {
     reportId: string;
@@ -245,6 +245,33 @@ export default function FlowClient({
             );
         }
 
+        // Paso después del chat: preguntar si se abrió la tienda
+        if (currentStep === 'tienda_abierta_check') {
+            return (
+                <ActionStep
+                    title="¿Se abrió la tienda?"
+                    description="Después del chat, ¿se abrió la tienda?"
+                    onYes={async () => {
+                        const result = await saveTiendaAbiertaStatus(reportId, true);
+                        if (result.error) {
+                            alert(result.error);
+                        } else if (result.flowUrl) {
+                            router.push(result.flowUrl);
+                        }
+                    }}
+                    onNo={async () => {
+                        const result = await saveTiendaAbiertaStatus(reportId, false);
+                        if (result.error) {
+                            alert(result.error);
+                        } else if (result.flowUrl) {
+                            router.push(result.flowUrl);
+                        }
+                    }}
+                    yesLabel="Sí, se abrió"
+                    noLabel="No, sigue cerrada"
+                />
+            );
+        }
     }
 
     if (reportType === 'bascula') {

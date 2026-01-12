@@ -41,9 +41,6 @@ export default async function Home() {
           {/* User Info */}
           {user && (
             <div className="mt-4 flex items-center justify-center gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 text-white text-sm">
-                ✅ Sesión activa: {user.email}
-              </div>
               <LogoutButton />
             </div>
           )}
@@ -152,35 +149,6 @@ export default async function Home() {
           )}
         </div>
 
-        {/* Footer Info */}
-        <div className="mt-12 text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 text-white">
-            <h3 className="font-semibold mb-2">Estado del Sistema</h3>
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <p className="text-sm">
-                Autenticación activa - Login implementado ✅
-              </p>
-            </div>
-            <p className="text-xs mt-2 text-red-100">
-              Base de datos: 14 migraciones | Auth: Supabase
-            </p>
-          </div>
-        </div>
-
-        {/* Development Info */}
-        <div className="mt-6 text-center text-red-100 text-sm">
-          <p>
-            📋{" "}
-            <Link href="/docs" className="underline hover:text-white">
-              Documentación
-            </Link>{" "}
-            | 🔧{" "}
-            <code className="bg-white/10 px-2 py-1 rounded">
-              Next.js 15 + Supabase + OpenAI
-            </code>
-          </p>
-        </div>
       </div>
     </div>
   );

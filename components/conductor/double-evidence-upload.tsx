@@ -137,7 +137,7 @@ export default function DoubleEvidenceUpload({
             {/* Segunda Foto - Opcional */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    {secondLabel} {secondOptional && <span className="text-gray-500 text-xs">(Opcional)</span>}
+                    {secondLabel} {secondOptional && <span className="text-gray-800 text-xs">(Opcional)</span>}
                 </label>
                 {previewUrls.second ? (
                     <div className="relative aspect-video w-full bg-gray-100 rounded-lg overflow-hidden mb-2">

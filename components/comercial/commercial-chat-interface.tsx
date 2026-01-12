@@ -371,7 +371,7 @@ export default function CommercialChatInterface({
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                    <div className="h-full flex flex-col items-center justify-center text-gray-800">
                         <p>No hay mensajes aún.</p>
                         <p className="text-sm">El conductor aún no ha enviado mensajes.</p>
                     </div>
@@ -402,7 +402,7 @@ export default function CommercialChatInterface({
                                             </div>
                                         )}
                                         {msg.text && <p className="text-sm">{msg.text}</p>}
-                                        <span className={`text-xs block mt-1 ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
+                                        <span className={`text-xs block mt-1 ${isMe ? 'text-green-100' : 'text-gray-700'}`}>
                                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
@@ -458,7 +458,7 @@ export default function CommercialChatInterface({
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder={(report.status === 'completed' || isExpired) ? "Chat cerrado" : "Escribe un mensaje..."}
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 placeholder-gray-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 placeholder-gray-700 bg-white disabled:bg-gray-100 disabled:text-gray-700"
                     disabled={(report.status === 'completed' || isExpired) || sending || uploadingImage}
                 />
                 <button

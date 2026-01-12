@@ -62,14 +62,14 @@ export default async function ReporteTipoPage({
                         <div className="flex items-center justify-center w-10 h-10 bg-gray-300 text-gray-600 rounded-full font-semibold">
                             3
                         </div>
-                        <span className="ml-3 font-medium text-gray-400">Evidencias</span>
+                        <span className="ml-3 font-medium text-gray-800">Evidencias</span>
                     </div>
                 </div>
             </div>
 
             {/* Store Info Card */}
             <div className="bg-white rounded-lg shadow p-6 mb-8">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Tienda Seleccionada</h3>
+                <h3 className="text-sm font-medium text-gray-800 mb-2">Tienda Seleccionada</h3>
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-lg font-semibold text-gray-900">

@@ -55,6 +55,7 @@ export default async function ChatPage({
                     reportCreatedAt={report.created_at}
                     timeoutAt={report.timeout_at}
                     initialMessages={messages || []}
+                    reportType={report.tipo_reporte}
                 />
             </main>
         </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { sendMessage, resolveReport, initializeChat, uploadChatImage } from '@/app/conductor/actions';
+import { sendMessage, resolveReport, initializeChat, uploadChatImage, saveTiendaAbiertaStatus } from '@/app/conductor/actions';
 import { MessageSender } from '@/lib/types/database.types';
 
 interface Message {
@@ -21,6 +21,7 @@ interface ChatInterfaceProps {
     reportCreatedAt: string; // New prop for persistent timer
     initialMessages: Message[];
     timeoutAt?: string | null; // Timeout timestamp
+    reportType?: string | null; // Tipo de reporte para manejar timeout automático
 }
 
 function usePersistentTimer(timeoutAt: string | null | undefined) {
@@ -56,7 +57,7 @@ function usePersistentTimer(timeoutAt: string | null | undefined) {
     return { formatted, isExpired, timeLeft };
 }
 
-export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages, timeoutAt: initialTimeoutAt }: ChatInterfaceProps) {
+export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages, timeoutAt: initialTimeoutAt, reportType }: ChatInterfaceProps) {
     const router = useRouter();
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [newMessage, setNewMessage] = useState('');
@@ -87,6 +88,22 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
     }, [reportId, initialized]);
 
     const { formatted: timeFormatted, isExpired } = usePersistentTimer(timeoutAt);
+    const [hasAutoClosed, setHasAutoClosed] = useState(false);
+
+    // Auto-cerrar reporte de tienda_cerrada si expira el timeout
+    useEffect(() => {
+        if (isExpired && reportType === 'tienda_cerrada' && !hasAutoClosed) {
+            setHasAutoClosed(true);
+            // Cerrar automáticamente el reporte (como si el usuario hubiera dicho "No se abrió")
+            saveTiendaAbiertaStatus(reportId, false).then((result) => {
+                if (result.success && result.flowUrl) {
+                    router.push(result.flowUrl);
+                }
+            }).catch((err) => {
+                console.error('Error auto-closing tienda cerrada report:', err);
+            });
+        }
+    }, [isExpired, reportType, reportId, hasAutoClosed, router]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -244,25 +261,27 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                 </p>
             </div>
 
-            {/* Resolve Button - Always visible to allow exit */}
-            <div className="mb-4">
-                <button
-                    onClick={handleResolve}
-                    disabled={resolving}
-                    className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow hover:bg-green-700 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
-                >
-                    {resolving ? 'Procesando...' : (
-                        <>
-                            <span>✅ Problema Resuelto / Continuar</span>
-                        </>
-                    )}
-                </button>
-            </div>
+            {/* Resolve Button - No visible para tienda_cerrada (solo comercial puede cerrar) */}
+            {reportType !== 'tienda_cerrada' && (
+                <div className="mb-4">
+                    <button
+                        onClick={handleResolve}
+                        disabled={resolving}
+                        className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow hover:bg-green-700 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+                    >
+                        {resolving ? 'Procesando...' : (
+                            <>
+                                <span>✅ Problema Resuelto / Continuar</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                    <div className="h-full flex flex-col items-center justify-center text-gray-800">
                         <p>No hay mensajes aún.</p>
                         <p className="text-sm">Describe tu problema para recibir ayuda.</p>
                     </div>
@@ -293,7 +312,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                                             </div>
                                         )}
                                         {msg.text && <p className="text-sm">{msg.text}</p>}
-                                        <span className={`text-xs block mt-1 ${isMe ? 'text-blue-100' : 'text-gray-400'}`}>
+                                        <span className={`text-xs block mt-1 ${isMe ? 'text-blue-100' : 'text-gray-700'}`}>
                                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
@@ -349,7 +368,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder={isExpired ? "Chat cerrado" : "Escribe un mensaje..."}
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 bg-white disabled:bg-gray-100 disabled:text-gray-700"
                     disabled={isExpired || sending || uploadingImage}
                 />
                 <button

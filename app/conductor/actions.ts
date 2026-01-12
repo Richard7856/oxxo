@@ -190,6 +190,82 @@ export async function updateCurrentStep(reportId: string, step: string) {
     }
 }
 
+export async function saveTiendaAbiertaStatus(reportId: string, tiendaAbierta: boolean) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    // Verificar que el reporte pertenece al usuario
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id, tipo_reporte, evidence')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) {
+        return { error: 'Reporte no encontrado' };
+    }
+
+    if (report.tipo_reporte !== 'tienda_cerrada') {
+        return { error: 'Esta función solo aplica para reportes de tienda cerrada' };
+    }
+
+    if (tiendaAbierta) {
+        // Si se abrió, cambiar el tipo de reporte a 'entrega' y mover la evidencia de facade a arrival_exhibit
+        const evidence = (report.evidence as Record<string, string>) || {};
+        const facadeImage = evidence['facade'];
+        
+        const updatedEvidence: Record<string, string> = {
+            ...evidence,
+        };
+        
+        // Mover facade a arrival_exhibit para continuar con el flujo de entrega
+        if (facadeImage) {
+            updatedEvidence['arrival_exhibit'] = facadeImage;
+        }
+
+        // Actualizar el reporte: cambiar tipo a 'entrega', actualizar evidencia, y establecer paso a '4a'
+        const { error: updateError } = await supabase
+            .from('reportes')
+            .update({
+                tipo_reporte: 'entrega',
+                evidence: updatedEvidence,
+                current_step: '4a',
+            })
+            .eq('id', reportId)
+            .eq('user_id', user.id);
+
+        if (updateError) {
+            console.error('Error updating report for tienda abierta:', updateError);
+            return { error: 'Error al actualizar el reporte' };
+        }
+
+        revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+        return { success: true, nextStep: '4a', flowUrl: `/conductor/nuevo-reporte/${reportId}/flujo?step=4a` };
+    } else {
+        // Si no se abrió, ir a finish para cerrar el reporte
+        const { error: updateError } = await supabase
+            .from('reportes')
+            .update({
+                current_step: 'finish',
+            })
+            .eq('id', reportId)
+            .eq('user_id', user.id);
+
+        if (updateError) {
+            console.error('Error updating report for tienda cerrada:', updateError);
+            return { error: 'Error al actualizar el reporte' };
+        }
+
+        revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+        return { success: true, nextStep: 'finish', flowUrl: `/conductor/nuevo-reporte/${reportId}/flujo?step=finish` };
+    }
+}
+
 export async function saveMermaStatus(reportId: string, hasMerma: boolean) {
     const supabase = await createClient();
     const {
@@ -393,15 +469,25 @@ async function createReportSummaryMessage(reportId: string, report: any, supabas
         // Insertar imágenes de evidencia como mensajes separados si existen
         if (report.evidence && typeof report.evidence === 'object') {
             const evidence = report.evidence as Record<string, string>;
-            const evidenceKeys = ['ticket_recibido', 'ticket', 'ticket_merma', 'incident_photo'];
+            // Incluir facade para tienda_cerrada
+            const evidenceKeys = ['ticket_recibido', 'ticket', 'ticket_merma', 'incident_photo', 'facade'];
             
             for (const key of evidenceKeys) {
                 if (evidence[key]) {
+                    const keyLabels: Record<string, string> = {
+                        ticket_recibido: 'Ticket Recibido',
+                        ticket: 'Ticket',
+                        ticket_merma: 'Ticket Merma',
+                        incident_photo: 'Foto de Incidencia',
+                        facade: 'Foto de Fachada',
+                    };
+                    const label = keyLabels[key] || key.replace('_', ' ').toUpperCase();
+                    
                     await supabase.from('messages').insert({
                         reporte_id: reportId,
                         sender: 'system',
                         sender_user_id: null,
-                        text: `📷 ${key.replace('_', ' ').toUpperCase()}`,
+                        text: `📷 ${label}`,
                         image_url: evidence[key],
                     }).catch((err: any) => {
                         console.error(`Error inserting evidence image ${key}:`, err);
@@ -649,7 +735,7 @@ export async function resolveReport(reportId: string) {
             nextStep = 'finish';
         }
     } else if (report.tipo_reporte === 'tienda_cerrada') {
-        nextStep = 'finish'; // Tienda cerrada solo tiene un paso de evidencia y luego termina
+        nextStep = 'tienda_abierta_check'; // Preguntar si se abrió la tienda
     } else if (report.tipo_reporte === 'bascula') {
         nextStep = 'finish'; // Báscula solo tiene un paso de evidencia y luego termina
     }

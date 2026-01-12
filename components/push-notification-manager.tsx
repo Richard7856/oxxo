@@ -312,7 +312,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                 </p>
                 <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <p className="text-sm text-gray-500">Verificando...</p>
+                    <p className="text-sm text-gray-800">Verificando...</p>
                 </div>
             </div>
         );
@@ -326,7 +326,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                     Tu navegador no soporta notificaciones push.
                 </p>
                 {isIOS ? (
-                    <div className="text-xs text-gray-500 space-y-1">
+                    <div className="text-xs text-gray-800 space-y-1">
                         <p>
                             <strong>Nota sobre iOS/Safari:</strong> Las notificaciones push en PWAs de iOS requieren iOS 16.4+ y tienen limitaciones.
                         </p>
@@ -335,7 +335,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                         </p>
                     </div>
                 ) : (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-800">
                         Para activar notificaciones, asegúrate de usar un navegador moderno (Chrome, Firefox, Edge) y que la app esté instalada como PWA.
                     </p>
                 )}

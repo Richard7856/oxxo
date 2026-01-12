@@ -153,7 +153,7 @@ export default function LoginPage() {
                                 placeholder="••••••••"
                             />
                             {mode === 'signup' && (
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-gray-800">
                                     Mínimo 6 caracteres
                                 </p>
                             )}
@@ -191,13 +191,6 @@ export default function LoginPage() {
                             ← Volver al inicio
                         </Link>
                     </div>
-                </div>
-
-                {/* Info Card */}
-                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
-                    <p className="text-center">
-                        🔐 Autenticación segura con <strong>Supabase</strong>
-                    </p>
                 </div>
             </div>
         </div>

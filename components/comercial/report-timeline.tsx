@@ -167,7 +167,7 @@ export default function ReportTimeline({ report, messages, evidence }: ReportTim
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div className="flex items-center justify-between mb-1">
                                     <h3 className="font-semibold text-gray-900">{event.title}</h3>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-800">
                                         {new Date(event.timestamp).toLocaleString('es-MX', {
                                             day: '2-digit',
                                             month: '2-digit',
@@ -202,7 +202,7 @@ export default function ReportTimeline({ report, messages, evidence }: ReportTim
                                 )}
                                 
                                 {event.type === 'message' && event.description.length > 100 && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-gray-800 mt-1">
                                         {event.description.substring(0, 100)}...
                                     </p>
                                 )}
@@ -213,7 +213,7 @@ export default function ReportTimeline({ report, messages, evidence }: ReportTim
             </div>
 
             {timelineEvents.length === 0 && (
-                <p className="text-gray-500 text-sm">No hay eventos en la línea de tiempo</p>
+                <p className="text-gray-800 text-sm">No hay eventos en la línea de tiempo</p>
             )}
 
             {/* Modal para expandir imagen */}
