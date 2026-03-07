@@ -1,7 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 
-export default async function AdminCompletedReportsList() {
+interface AdminCompletedReportsListProps {
+    limit?: number;
+}
+
+export default async function AdminCompletedReportsList({ limit = 10 }: AdminCompletedReportsListProps) {
     const supabase = await createClient();
     
     // Obtener TODOS los reportes completados (sin filtro de zona para admin)
@@ -10,7 +14,7 @@ export default async function AdminCompletedReportsList() {
         .select('*')
         .in('status', ['completed', 'timed_out', 'archived'])
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(limit);
 
     if (error) {
         console.error('Error fetching completed reports:', error);
@@ -49,7 +53,7 @@ export default async function AdminCompletedReportsList() {
     }
 
     return (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {reportes.map((reporte) => {
                 const storeName = reporte.store_nombre || 'Tienda desconocida';
                 const conductorInfoData = conductorInfo[reporte.user_id] || {};
@@ -64,39 +68,39 @@ export default async function AdminCompletedReportsList() {
                 return (
                     <div
                         key={reporte.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                        className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors"
                     >
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                    <h4 className="font-semibold text-gray-900">{storeName}</h4>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusInfo.color}`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                    <h4 className="font-semibold text-gray-900 text-sm truncate">{storeName}</h4>
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${statusInfo.color} flex-shrink-0`}>
                                         {statusInfo.label}
                                     </span>
-                                    <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 flex-shrink-0">
                                         {reporte.store_zona}
                                     </span>
                                     {reporte.ticket_data && (
-                                        <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800" title="Tiene datos de ticket procesados">
+                                        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 flex-shrink-0" title="Tiene datos de ticket procesados">
                                             ✓ Ticket
                                         </span>
                                     )}
                                 </div>
-                                <div className="text-sm text-gray-600 space-y-1">
-                                    <p>
-                                        <span className="font-medium">Conductor:</span> {conductorName}
+                                <div className="text-xs text-gray-600 space-y-0.5">
+                                    <p className="truncate">
+                                        <span className="font-medium">Conductor:</span> <span className="truncate">{conductorName}</span>
                                     </p>
                                     <p>
                                         <span className="font-medium">Tipo:</span> {reporte.tipo_reporte || 'No especificado'}
                                     </p>
                                     <p>
                                         <span className="font-medium">Creado:</span>{' '}
-                                        {new Date(reporte.created_at).toLocaleString('es-MX')}
+                                        {new Date(reporte.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}
                                     </p>
                                     {reporte.resolved_at && (
                                         <p>
                                             <span className="font-medium">Resuelto:</span>{' '}
-                                            {new Date(reporte.resolved_at).toLocaleString('es-MX')}
+                                            {new Date(reporte.resolved_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}
                                         </p>
                                     )}
                                     {reporte.store_codigo && (
@@ -106,18 +110,18 @@ export default async function AdminCompletedReportsList() {
                                     )}
                                 </div>
                             </div>
-                            <div className="ml-4 flex flex-col gap-2">
+                            <div className="flex flex-col gap-2 flex-shrink-0">
                                 <Link
                                     href={`/admin/chat/${reporte.id}`}
-                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors text-center"
+                                    className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors text-center whitespace-nowrap"
                                 >
-                                    Ver Chat
+                                    Chat
                                 </Link>
                                 <Link
                                     href={`/admin/reporte/${reporte.id}`}
-                                    className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-center"
+                                    className="bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-700 transition-colors text-center whitespace-nowrap"
                                 >
-                                    Ver Detalles
+                                    Detalles
                                 </Link>
                             </div>
                         </div>

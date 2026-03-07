@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
         console.log('Extrayendo datos del ticket con URL:', imageUrl);
 
         // Verificar que la API key esté configurada
-        if (!process.env.GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY no está configurada');
+        if (!process.env.ANTHROPIC_API_KEY) {
+            console.error('ANTHROPIC_API_KEY no está configurada');
             return NextResponse.json(
-                { error: 'Configuración del servidor incompleta: GEMINI_API_KEY no está configurada' },
+                { error: 'Configuración del servidor incompleta: ANTHROPIC_API_KEY no está configurada' },
                 { status: 500 }
             );
         }

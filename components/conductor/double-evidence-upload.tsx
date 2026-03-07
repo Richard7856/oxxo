@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import CameraCapture from './camera-capture';
 
@@ -51,7 +51,12 @@ export default function DoubleEvidenceUpload({
 
     const processFile = async (key: 'first' | 'second', file: File) => {
         const objectUrl = URL.createObjectURL(file);
-        setPreviewUrls(prev => ({ ...prev, [key]: objectUrl }));
+        // Revoke previous blob URL before replacing to avoid memory leak
+        setPreviewUrls(prev => {
+            const old = prev[key];
+            if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+            return { ...prev, [key]: objectUrl };
+        });
         setUploading(prev => ({ ...prev, [key]: true }));
         setError(null);
 
@@ -64,6 +69,19 @@ export default function DoubleEvidenceUpload({
             setUploading(prev => ({ ...prev, [key]: false }));
         }
     };
+
+    // Cleanup all blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            if (previewUrls.first && previewUrls.first.startsWith('blob:')) {
+                URL.revokeObjectURL(previewUrls.first);
+            }
+            if (previewUrls.second && previewUrls.second.startsWith('blob:')) {
+                URL.revokeObjectURL(previewUrls.second);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleCameraCapture = async (file: File) => {
         if (showCamera) {

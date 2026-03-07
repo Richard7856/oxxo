@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mapa Interactivo - Flujo Chofer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero hero-compact">
+      <div class="container">
+        <p class="eyebrow">Mapa interactivo</p>
+        <h1>Mapa interactivo de flujos</h1>
+        <p class="subtitle">
+          Recorridos guiados con hotspots para explicar cada paso y accion clave del proceso.
+        </p>
+        <div class="hero-actions">
+          <a class="pill-link" href="./index.html">Volver al resumen ejecutivo</a>
+          <a class="pill-link" href="#pasos-comunes">Pasos comunes</a>
+          <a class="pill-link" href="#tienda-cerrada">Flujo: tienda cerrada</a>
+          <a class="pill-link" href="#bascula-mal-estado">Flujo: bascula en mal estado</a>
+          <a class="pill-link" href="#entrega-normal">Flujo: entrega normal</a>
+          <a class="pill-link" href="#dashboard">Dashboard Admin/Comercial</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="flow-tabs" role="tablist" aria-label="Selector de flujos">
+        <button class="flow-tab is-active" data-flow="tienda-cerrada" role="tab">
+          Tienda cerrada
+        </button>
+        <button class="flow-tab" data-flow="bascula-mal-estado" role="tab">Bascula</button>
+        <button class="flow-tab" data-flow="entrega-normal" role="tab">Entrega normal</button>
+        <button class="flow-tab" data-flow="dashboard" role="tab">Dashboard</button>
+        <button class="flow-tab" data-flow="all" role="tab">Ver todo</button>
+      </div>
+
+      <section class="section common-section flow-section" id="pasos-comunes" data-flow="chofer-flows">
+        <div class="flow-header">
+          <div>
+            <h2>Pasos comunes (1-4)</h2>
+            <p class="muted">Estos pasos se repiten en todos los flujos del chofer.</p>
+          </div>
+        </div>
+
+        <div class="flow-grid">
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 1</span>
+              <h3>Inicio del rol Conductor</h3>
+              <p>Seleccion del rol y acceso al panel operativo.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F1.png?alt=media&token=f9060297-82aa-4ba0-9e61-735301fc12e5"
+                data-file="01-inicio.png"
+                alt="Inicio rol conductor"
+              />
+              <details class="hotspot" style="--x:50; --y:66;">
+                <summary>1</summary>
+                <div class="tooltip">Acceder: abre el panel del conductor.</div>
+              </details>
+              <details class="hotspot" style="--x:50; --y:36;">
+                <summary>2</summary>
+                <div class="tooltip">Cerrar sesion: salida segura del sistema.</div>
+              </details>
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 2</span>
+              <h3>Panel del Conductor</h3>
+              <p>Inicio del proceso guiado para registrar una incidencia.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F2.png?alt=media&token=37aeb69b-8a3a-4637-b489-72adc1930f8a"
+                data-file="02-panel.png"
+                alt="Panel del conductor"
+              />
+              <details class="hotspot" style="--x:50; --y:41;">
+                <summary>1</summary>
+                <div class="tooltip">Crear nuevo reporte: inicia el flujo paso a paso.</div>
+              </details>
+              <details class="hotspot" style="--x:20; --y:64;">
+                <summary>2</summary>
+                <div class="tooltip">Proceso guiado: valida datos automaticamente.</div>
+              </details>
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 3</span>
+              <h3>Validar tienda</h3>
+              <p>Ingreso del codigo de tienda para autenticar la visita.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F33.png?alt=media&token=516b7007-ade5-4532-8244-3d63658d8473"
+                data-file="03-validar-tienda.png"
+                alt="Validar codigo de tienda"
+              />
+              <details class="hotspot" style="--x:50; --y:51;">
+                <summary>1</summary>
+                <div class="tooltip">Codigo de tienda: captura el identificador oficial.</div>
+              </details>
+              <details class="hotspot" style="--x:50; --y:67;">
+                <summary>2</summary>
+                <div class="tooltip">Validar tienda: verifica en la base oficial.</div>
+              </details>
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 4</span>
+              <h3>Confirmar tienda</h3>
+              <p>Confirmacion de la tienda validada antes de continuar.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F4.png?alt=media&token=6f1db4f7-b3c9-401f-9dbe-2527fab41472"
+                data-file="04-confirmar-tienda.png"
+                alt="Confirmar tienda"
+              />
+              <details class="hotspot" style="--x:70; --y:71;">
+                <summary>1</summary>
+                <div class="tooltip">Confirmar y continuar: avanza al tipo de reporte.</div>
+              </details>
+              <details class="hotspot" style="--x:30; --y:71;">
+                <summary>2</summary>
+                <div class="tooltip">Cambiar tienda: regresa para corregir datos.</div>
+              </details>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section flow-section" id="tienda-cerrada" data-flow="tienda-cerrada">
+        <div class="flow-header">
+          <div>
+            <h2>Flujo: Chofer con tienda cerrada</h2>
+            <p class="muted">
+              Haz clic en los indicadores numerados para ver la accion o decision que representa
+              cada boton o componente.
+            </p>
+          </div>
+        </div>
+
+        <div class="flow-grid">
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 5</span>
+              <h3>Tipo de reporte</h3>
+              <p>Seleccion de incidencia: tienda cerrada.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F5.png?alt=media&token=37c08384-f005-4648-b071-502682890529"
+                data-file="05-tipo-reporte.png"
+                alt="Tipo de reporte tienda cerrada"
+              />
+              <details class="hotspot" style="--x:50; --y:56;">
+                <summary>1</summary>
+                <div class="tooltip">Tienda cerrada: define el flujo de evidencia.</div>
+              </details>
+              <details class="hotspot" style="--x:77; --y:88;">
+                <summary>2</summary>
+                <div class="tooltip">Continuar: pasa a capturar evidencia de fachada.</div>
+              </details>
+              <details class="hotspot" style="--x:78; --y:27;">
+                <summary>3</summary>
+                <div class="tooltip">Cancelar reporte: detiene el proceso si aplica.</div>
+              </details>
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 6</span>
+              <h3>Evidencia de fachada</h3>
+              <p>Captura fotografica para validar la tienda cerrada.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F7.png?alt=media&token=e2202312-b9ce-416f-889b-e387e6d2378a"
+                data-file="06-evidencia-fachada.png"
+                alt="Evidencia fachada"
+              />
+              <details class="hotspot" style="--x:50; --y:66;">
+                <summary>1</summary>
+                <div class="tooltip">Continuar: guarda evidencia y avanza.</div>
+              </details>
+              <details class="hotspot" style="--x:58; --y:43;">
+                <summary>2</summary>
+                <div class="tooltip">Cambiar/Retomar: actualiza la fotografia.</div>
+              </details>
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 7</span>
+              <h3>Soporte y chat</h3>
+              <p>Canal de apoyo con tiempo de espera y registro de mensajes.</p>
+              <p class="screen-note">
+                Si la tienda abre o soporte confirma solucion, el flujo continua como entrega
+                normal.
+              </p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F8.png?alt=media&token=bbaa8769-2b0c-4f64-a393-298114d8d9db"
+                data-file="07-soporte-chat.png"
+                alt="Soporte y chat"
+              />
+              <details class="hotspot" style="--x:85; --y:78;">
+                <summary>1</summary>
+                <div class="tooltip">Enviar: deja evidencia y comunicacion en ruta.</div>
+              </details>
+              <details class="hotspot" style="--x:48; --y:35;">
+                <summary>2</summary>
+                <div class="tooltip">Tiempo de espera: SLA de atencion visible.</div>
+              </details>
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 8</span>
+              <h3>Reporte enviado</h3>
+              <p>Cierre de incidencia y retorno al inicio.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2F99.png?alt=media&token=7f1f5926-4abb-4ff7-8740-4957b57c9600"
+                data-file="08-reporte-enviado.png"
+                alt="Reporte enviado"
+              />
+              <details class="hotspot" style="--x:50; --y:58;">
+                <summary>1</summary>
+                <div class="tooltip">Volver al inicio: listo para el siguiente reporte.</div>
+              </details>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section flow-section" id="bascula-mal-estado" data-flow="bascula-mal-estado">
+        <div class="flow-header">
+          <div>
+            <h2>Flujo: Bascula en mal estado</h2>
+            <p class="muted">
+              Borrador inicial basado en el flujo de tienda cerrada. Sustituye las capturas cuando
+              esten disponibles.
+            </p>
+          </div>
+        </div>
+
+        <div class="flow-grid">
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 5</span>
+              <h3>Tipo de reporte: Bascula</h3>
+              <p>Seleccion de incidencia por bascula en mal estado.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FB5.png?alt=media&token=4652184a-ac72-441c-8239-920c4f4eceb7"
+                data-file="bascula-04-tipo-reporte.png"
+                alt="Bascula - Tipo de reporte"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 6</span>
+              <h3>Evidencia de bascula</h3>
+              <p>Captura fotografica del estado de la bascula.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FB6.png?alt=media&token=b3b0febd-d4ea-44bb-84e9-4eca4963c494"
+                data-file="bascula-05-evidencia.png"
+                alt="Bascula - Evidencia"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 7</span>
+              <h3>Reporte enviado</h3>
+              <p>Cierre de incidencia y retorno al inicio.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FB7.png?alt=media&token=7b1c136f-72f7-4ab4-84ea-af48cd3fe721"
+                data-file="bascula-06-reporte-enviado.png"
+                alt="Bascula - Reporte enviado"
+              />
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section flow-section" id="entrega-normal" data-flow="entrega-normal">
+        <div class="flow-header">
+          <div>
+            <h2>Flujo: Entrega normal</h2>
+            <p class="muted">
+              Canvas base para el flujo principal de entrega. Ajustaremos pasos y hotspots cuando
+              tengamos las capturas definitivas.
+            </p>
+          </div>
+        </div>
+
+        <div class="flow-grid">
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 5</span>
+              <h3>Tipo de reporte: Entrega</h3>
+              <p>Seleccion de entrega completa o con incidencias.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN5.png?alt=media&token=0687ad46-712a-4ba7-962a-8ad042662421"
+                data-file="entrega-05-tipo-reporte.png"
+                alt="Entrega - Tipo de reporte"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 6</span>
+              <h3>Foto de acomodo</h3>
+              <p>Foto del exhibidor al llegar.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN6.png?alt=media&token=8f674458-7afd-4309-a54c-5c43a4e9e1c1"
+                data-file="entrega-06-foto-acomodo-inicial.png"
+                alt="Entrega - Foto de acomodo inicial"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 7</span>
+              <h3>¿Hubo incidencias?</h3>
+              <p>Decision para continuar con incidencias o flujo normal.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN7.png?alt=media&token=39eb63a2-c645-4b51-8264-482b2b09ec23"
+                data-file="entrega-07-incidencias-pregunta.png"
+                alt="Entrega - Pregunta incidencias"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 8</span>
+              <h3>Reportar incidencias</h3>
+              <p>Registro de productos con incidencias (si aplica).</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN8.png?alt=media&token=6bce593d-5fc2-4ec0-9163-fec60e849fb3"
+                data-file="entrega-08-incidencias-form.png"
+                alt="Entrega - Reportar incidencias"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 9</span>
+              <h3>Chat con el comercial</h3>
+              <p>Seguimiento y confirmacion antes de continuar.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN9.png?alt=media&token=a0ae7c98-a1cf-412e-9592-65d38d2ea41a"
+                data-file="entrega-09-chat-comercial.png"
+                alt="Entrega - Chat con comercial"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 10</span>
+              <h3>Foto de acomodo</h3>
+              <p>Producto acomodado.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN10.png?alt=media&token=b7fda55b-7fb2-4df0-a31d-e933aeced951"
+                data-file="entrega-10-foto-acomodo-final.png"
+                alt="Entrega - Foto de acomodo"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 11</span>
+              <h3>¿Hay merma?</h3>
+              <p>Confirmacion para capturar evidencia de merma.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN11.png?alt=media&token=43411f23-de28-4402-9003-12c65fb16917"
+                data-file="entrega-11-merma-pregunta.png"
+                alt="Entrega - Pregunta merma"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 12</span>
+              <h3>Foto de merma</h3>
+              <p>Foto del producto retirado (merma).</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN12.png?alt=media&token=8b9fa8bd-6935-4ae9-9f43-1a62aa4f6760"
+                data-file="entrega-12-merma-evidencia.png"
+                alt="Entrega - Evidencia merma"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 13</span>
+              <h3>¿Hay ticket de recibido?</h3>
+              <p>Confirmacion para capturar el ticket de recibido.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN13.png?alt=media&token=c45fd37c-6dba-446f-b470-0369acf89fcd"
+                data-file="entrega-13-ticket-recibido-pregunta.png"
+                alt="Entrega - Ticket recibido pregunta"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 14</span>
+              <h3>Extraccion de info del ticket</h3>
+              <p>Revision de datos extraidos del ticket de recibido.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN15.png?alt=media&token=4867c56b-0f89-4cc3-89d6-1d7b22aa8fbe"
+                data-file="entrega-14-ticket-recibido-info.png"
+                alt="Entrega - Revision ticket recibido"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 15</span>
+              <h3>Foto del ticket de merma</h3>
+              <p>Captura del ticket de merma.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN17.png?alt=media&token=fe77cbd4-f1bf-41df-9d45-fbae0d58be41"
+                data-file="entrega-15-ticket-merma.png"
+                alt="Entrega - Ticket merma"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 16</span>
+              <h3>Extraccion info ticket merma</h3>
+              <p>Revision de datos extraidos del ticket de merma.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN18.png?alt=media&token=798d0d47-4b44-4131-8e35-0c2c6d28b415"
+                data-file="entrega-16-ticket-merma-info.png"
+                alt="Entrega - Revision ticket merma"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">Paso 18</span>
+              <h3>Reporte enviado</h3>
+              <p>Cierre de entrega y retorno al inicio.</p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FN19.png?alt=media&token=4510bfec-ac20-447c-8b5f-70e111f28d3e"
+                data-file="entrega-17-reporte-enviado.png"
+                alt="Entrega - Reporte enviado"
+              />
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section flow-section" id="dashboard" data-flow="dashboard">
+        <div class="flow-header">
+          <div>
+            <h2>Dashboard de Administración y Comercial</h2>
+            <p class="muted">
+              Vista centralizada para gestionar y monitorear todos los reportes del sistema. Los
+              administradores y comerciales pueden ver reportes activos, completados, comunicarse
+              vía chat y acceder a detalles completos de cada incidencia.
+            </p>
+          </div>
+        </div>
+
+        <div class="flow-grid dashboard-grid">
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">1 / 2</span>
+              <h3>Panel de Administrador / Comercial</h3>
+              <p>
+                Vista principal con estadísticas, notificaciones push y listado de reportes activos
+                y completados.
+              </p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FD1.png?alt=media&token=d23fc8c1-e735-4d29-93b3-6d713ebbc6ad"
+                data-file="dashboard-admin-comercial.png"
+                alt="Dashboard Admin/Comercial"
+              />
+            </div>
+          </article>
+
+          <article class="screen-card">
+            <div class="screen-header">
+              <span class="screen-step">2 / 2</span>
+              <h3>Detalles del Reporte</h3>
+              <p>
+                Vista de un reporte individual: resumen, recibido vs merma, productos, línea de
+                tiempo, fotos y tickets de entrega y merma.
+              </p>
+            </div>
+            <div class="screen-image">
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/oxxo-deliveryflow.firebasestorage.app/o/mapa%2FD5.png?alt=media&token=20c2a83f-8efe-44be-80fa-8fecaf4af48c"
+                data-file="dashboard-detalle-reporte.png"
+                alt="Detalles del Reporte"
+              />
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="cta">
+          <h2>Mensaje para directivos</h2>
+          <p>
+            Este flujo evidencia el control operativo en ruta, la captura de evidencia y el canal
+            de soporte en tiempo real para garantizar cierre de incidencias con trazabilidad.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <div class="image-modal" id="image-modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="image-modal__content">
+        <button class="image-modal__close" type="button" aria-label="Cerrar imagen">×</button>
+        <img src="" alt="Vista ampliada" />
+      </div>
+    </div>
+
+    <script>
+      const flowTabs = Array.from(document.querySelectorAll(".flow-tab"));
+      const flowSections = Array.from(
+        document.querySelectorAll(".flow-section[data-flow]")
+      );
+      const modal = document.getElementById("image-modal");
+      const modalImage = modal.querySelector("img");
+      const modalClose = modal.querySelector(".image-modal__close");
+      const modalContent = modal.querySelector(".image-modal__content");
+
+      function setActiveFlow(flow) {
+        flowTabs.forEach((tab) => {
+          tab.classList.toggle("is-active", tab.dataset.flow === flow);
+        });
+
+        // Obtener la sección de pasos comunes
+        const commonSection = document.getElementById("pasos-comunes");
+
+        flowSections.forEach((section) => {
+          if (flow === "all") {
+            section.classList.remove("is-hidden");
+            // Mostrar pasos comunes cuando se ve todo
+            if (commonSection) {
+              commonSection.classList.remove("is-hidden");
+            }
+            return;
+          }
+          
+          // Si es dashboard, ocultar pasos comunes
+          if (flow === "dashboard") {
+            if (commonSection) {
+              commonSection.classList.add("is-hidden");
+            }
+            section.classList.toggle("is-hidden", section.dataset.flow !== flow);
+          } else {
+            // Para flujos del chofer, mostrar pasos comunes
+            const choferFlows = ["tienda-cerrada", "bascula-mal-estado", "entrega-normal"];
+            if (commonSection && choferFlows.includes(flow)) {
+              commonSection.classList.remove("is-hidden");
+            } else if (commonSection) {
+              // Para otros flujos que no sean del chofer, ocultar pasos comunes
+              commonSection.classList.add("is-hidden");
+            }
+            section.classList.toggle("is-hidden", section.dataset.flow !== flow);
+          }
+        });
+      }
+
+      function getFlowFromHash() {
+        const hash = window.location.hash.replace("#", "");
+        const match = flowSections.find(
+          (section) => section.id === hash || section.dataset.flow === hash
+        );
+        // Si el hash es "pasos-comunes", devolver un flujo de chofer para mostrar los pasos comunes
+        if (hash === "pasos-comunes") {
+          return "tienda-cerrada";
+        }
+        return match?.dataset.flow || "tienda-cerrada";
+      }
+
+      setActiveFlow(getFlowFromHash());
+
+      flowTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const flow = tab.dataset.flow;
+          setActiveFlow(flow);
+          if (flow !== "all") {
+            const target = document.getElementById(flow);
+            if (target) {
+              target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }
+        });
+      });
+
+      window.addEventListener("hashchange", () => {
+        setActiveFlow(getFlowFromHash());
+      });
+
+      document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLImageElement)) return;
+        if (!target.closest(".screen-image")) return;
+        if (!target.src) return;
+        modalImage.src = target.src;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+      });
+
+      function closeModal() {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        modalImage.src = "";
+        modalContent.classList.remove("is-zoomed");
+      }
+
+      modalClose.addEventListener("click", closeModal);
+      modalImage.addEventListener("click", () => {
+        if (!modal.classList.contains("is-open")) return;
+        modalContent.classList.toggle("is-zoomed");
+      });
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeModal();
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal.classList.contains("is-open")) {
+          closeModal();
+        }
+      });
+    </script>
+  </body>
+</html>

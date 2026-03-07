@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import CloseReportButton from '@/components/comercial/close-report-button';
-import ReportTimeline from '@/components/comercial/report-timeline';
-import TicketDashboard from '@/components/comercial/ticket-dashboard';
+import ReportDetailContent from '@/components/shared/report-detail-content';
+import IncidentDetailsView from '@/components/shared/incident-details-view';
 
 export default async function ReportDetailPage({
     params,
@@ -116,39 +115,30 @@ export default async function ReportDetailPage({
                     </div>
                 </div>
 
-                {/* Ticket Dashboard */}
-                {report.ticket_data && (
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Dashboard de Ticket</h2>
-                        <TicketDashboard 
-                            ticketData={report.ticket_data as any}
-                            incidentDetails={report.incident_details as any}
-                        />
-                    </div>
-                )}
+                {/* Contenido con navegación por tabs */}
+                <ReportDetailContent
+                    reportId={id}
+                    report={{
+                        id: report.id,
+                        status: report.status,
+                        tipo_reporte: report.tipo_reporte,
+                        created_at: report.created_at,
+                        submitted_at: report.submitted_at,
+                        resolved_at: report.resolved_at,
+                        timeout_at: report.timeout_at,
+                        updated_at: report.updated_at,
+                    }}
+                    ticketData={report.ticket_data as any}
+                    incidentDetails={report.incident_details as any}
+                    messages={messages || []}
+                    evidence={evidence}
+                    chatUrl={`/comercial/chat/${id}`}
+                    hasChat={report.status === 'submitted' || report.status === 'resolved_by_driver'}
+                />
 
-                {/* Timeline */}
+                {/* Información adicional del reporte */}
                 <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Línea de Tiempo</h2>
-                    <ReportTimeline 
-                        report={{
-                            id: report.id,
-                            status: report.status,
-                            tipo_reporte: report.tipo_reporte,
-                            created_at: report.created_at,
-                            submitted_at: report.submitted_at,
-                            resolved_at: report.resolved_at,
-                            timeout_at: report.timeout_at,
-                            updated_at: report.updated_at,
-                        }}
-                        messages={messages || []}
-                        evidence={evidence}
-                    />
-                </div>
-
-                {/* Report Info */}
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Información del Reporte</h2>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Información Adicional</h2>
                     <div className="grid md:grid-cols-2 gap-4">
                         <div>
                             <p className="text-sm text-gray-600">Tienda</p>
@@ -166,65 +156,12 @@ export default async function ReportDetailPage({
                             <p className="text-sm text-gray-600">Conductor</p>
                             <p className="font-semibold text-gray-900">{conductorName}</p>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Tipo de Reporte</p>
-                            <p className="font-semibold text-gray-900">{report.tipo_reporte || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Fecha de Creación</p>
-                            <p className="font-semibold text-gray-900">
-                                {new Date(report.created_at).toLocaleString('es-MX')}
-                            </p>
-                        </div>
-                        {report.submitted_at && (
-                            <div>
-                                <p className="text-sm text-gray-600">Fecha de Envío</p>
-                                <p className="font-semibold text-gray-900">
-                                    {new Date(report.submitted_at).toLocaleString('es-MX')}
-                                </p>
-                            </div>
-                        )}
-                        {report.resolved_at && (
-                            <div>
-                                <p className="text-sm text-gray-600">Fecha de Resolución</p>
-                                <p className="font-semibold text-gray-900">
-                                    {new Date(report.resolved_at).toLocaleString('es-MX')}
-                                </p>
-                            </div>
-                        )}
                     </div>
                 </div>
 
-                {/* Evidence */}
-                {Object.keys(evidence).length > 0 && (
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Evidencias</h2>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            {Object.entries(evidence).map(([key, url]) => (
-                                <div key={key} className="border border-gray-200 rounded-lg overflow-hidden">
-                                    <div className="relative aspect-video w-full bg-gray-100">
-                                        <Image
-                                            src={url}
-                                            alt={key}
-                                            fill
-                                            className="object-contain"
-                                        />
-                                    </div>
-                                    <p className="p-2 text-sm text-gray-600 text-center">{key}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {/* Incident Details */}
                 {report.incident_details && (
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Detalles de Incidencias</h2>
-                        <pre className="bg-gray-50 p-4 rounded-lg overflow-auto text-sm">
-                            {JSON.stringify(report.incident_details, null, 2)}
-                        </pre>
-                    </div>
+                    <IncidentDetailsView incidentDetails={report.incident_details} />
                 )}
             </div>
         </div>

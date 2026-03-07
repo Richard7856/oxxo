@@ -42,9 +42,8 @@ export async function closeChat(reportId: string) {
         return { error: `No se puede cerrar un reporte con estado: ${report.status}` };
     }
 
-    // Si ya está resuelto por el conductor, marcarlo como completado
-    // Si está en submitted, marcarlo como resuelto por el comercial (pero cambiamos a completed directamente)
-    const newStatus = report.status === 'resolved_by_driver' ? 'completed' : 'completed';
+    // Ambos estados (submitted y resolved_by_driver) se cierran como completed
+    const newStatus = 'completed';
 
     // Actualizar el estado del reporte
     const { error: updateError } = await supabase

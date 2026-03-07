@@ -97,7 +97,7 @@ export default function CommercialChatInterface({
     // Realtime subscription
     useEffect(() => {
         const channel = supabase
-            .channel('chat_messages')
+            .channel(`chat_messages_${reportId}`)
             .on(
                 'postgres_changes',
                 {

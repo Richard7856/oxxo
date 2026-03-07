@@ -305,28 +305,21 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
     // Mostrar estado de carga inicial
     if (isChecking) {
         return (
-            <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="font-semibold text-lg mb-2">Notificaciones Push</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                    Recibe notificaciones cuando haya nuevos mensajes en el chat
-                </p>
-                <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <p className="text-sm text-gray-800">Verificando...</p>
-                </div>
+            <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <p className="text-sm text-gray-800">Verificando...</p>
             </div>
         );
     }
 
     if (!isSupported) {
         return (
-            <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="font-semibold text-lg mb-2">Notificaciones Push</h3>
-                <p className="text-sm text-gray-600 mb-2">
+            <div className="text-sm text-gray-600">
+                <p className="mb-2">
                     Tu navegador no soporta notificaciones push.
                 </p>
                 {isIOS ? (
-                    <div className="text-xs text-gray-800 space-y-1">
+                    <div className="text-xs text-gray-600 space-y-1">
                         <p>
                             <strong>Nota sobre iOS/Safari:</strong> Las notificaciones push en PWAs de iOS requieren iOS 16.4+ y tienen limitaciones.
                         </p>
@@ -335,7 +328,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                         </p>
                     </div>
                 ) : (
-                    <p className="text-xs text-gray-800">
+                    <p className="text-xs text-gray-600">
                         Para activar notificaciones, asegúrate de usar un navegador moderno (Chrome, Firefox, Edge) y que la app esté instalada como PWA.
                     </p>
                 )}
@@ -344,22 +337,15 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
     }
 
     return (
-        <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-semibold text-lg mb-2">Notificaciones Push</h3>
-            <p className="text-sm text-gray-600 mb-4">
-                Recibe notificaciones cuando haya nuevos mensajes en el chat
-            </p>
+        <>
             {isSubscribed ? (
-                <div className="space-y-2">
-                    <p className="text-sm text-green-600">✓ Notificaciones activadas</p>
-                    <button
-                        onClick={unsubscribe}
-                        disabled={isLoading}
-                        className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
-                    >
-                        {isLoading ? 'Desactivando...' : 'Desactivar Notificaciones'}
-                    </button>
-                </div>
+                <button
+                    onClick={unsubscribe}
+                    disabled={isLoading}
+                    className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                    {isLoading ? 'Desactivando...' : 'Desactivar Notificaciones'}
+                </button>
             ) : (
                 <button
                     onClick={requestPermission}
@@ -369,7 +355,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
                     {isLoading ? 'Activando...' : 'Activar Notificaciones'}
                 </button>
             )}
-        </div>
+        </>
     );
 }
 

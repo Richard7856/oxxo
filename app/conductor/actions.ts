@@ -210,8 +210,8 @@ export async function saveTiendaAbiertaStatus(reportId: string, tiendaAbierta: b
         return { error: 'Reporte no encontrado' };
     }
 
-    if (report.tipo_reporte !== 'tienda_cerrada') {
-        return { error: 'Esta función solo aplica para reportes de tienda cerrada' };
+    if (!['tienda_cerrada', 'bascula'].includes(report.tipo_reporte as string)) {
+        return { error: 'Esta función solo aplica para reportes de tienda cerrada o báscula' };
     }
 
     if (tiendaAbierta) {
@@ -578,7 +578,7 @@ export async function uploadChatImage(reportId: string, formData: FormData) {
 
     // Subir archivo a Supabase Storage
     const { error: uploadError } = await supabase.storage
-        .from('reportes')
+        .from('evidence')
         .upload(filePath, file, {
             cacheControl: '3600',
             upsert: false,
@@ -591,7 +591,7 @@ export async function uploadChatImage(reportId: string, formData: FormData) {
 
     // Obtener URL pública
     const { data: urlData } = supabase.storage
-        .from('reportes')
+        .from('evidence')
         .getPublicUrl(filePath);
 
     if (!urlData?.publicUrl) {
@@ -629,24 +629,25 @@ export async function submitIncidentReport(reportId: string, incidents: any[]) {
         timestamp: new Date().toISOString(),
     };
 
-    try {
-        const response = await fetch('https://n8n.srv925698.hstgr.cloud/webhook/template', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
+    const n8nTemplateUrl = process.env.N8N_TEMPLATE_URL;
+    if (!n8nTemplateUrl) {
+        console.warn('N8N_TEMPLATE_URL no está configurada, omitiendo webhook de incidencias');
+    } else {
+        try {
+            const response = await fetch(n8nTemplateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
 
-        if (!response.ok) {
-            console.error('Webhook failed:', response.status, await response.text());
-            // We continue anyway as per instructions "no se espera respuesta" implies fire & forget or at least don't block
-            // But usually we want to know if it failed. instructions say "no se espera respuesta en este se abre el primer chat"
-            // which means we treat it as success and go to chat.
+            if (!response.ok) {
+                console.error('Webhook failed:', response.status, await response.text());
+            }
+        } catch (error) {
+            console.error('Webhook error:', error);
         }
-    } catch (error) {
-        console.error('Webhook error:', error);
-        // Continue to chat even on error? Probably yes to not block user.
     }
 
     // Save incidents to DB as well for record
@@ -706,50 +707,11 @@ export async function resolveReport(reportId: string) {
         return { error: 'Error al resolver reporte' };
     }
 
-    // Determinar el siguiente paso basado en el tipo de reporte y la evidencia
-    let nextStep = 'finish'; // Default to finish
-
-    if (report.tipo_reporte === 'entrega') {
-        const evidence = report.evidence as Record<string, string> || {};
-        
-        // Flujo: arrival_exhibit -> incident_check -> (5 si hay incidencias) -> 6 (product_arranged) -> 7 (waste_check) -> 7a/7b -> 8 (ticket_check) -> ...
-        
-        // Si tiene arrival_exhibit pero no product_arranged, siguiente paso es 6 (Producto Acomodado)
-        if (evidence['arrival_exhibit'] && !evidence['product_arranged']) {
-            nextStep = '6';
-        }
-        // Si tiene product_arranged pero no waste_evidence ni remission, siguiente paso es 7 (¿Hay Merma?)
-        else if (evidence['product_arranged'] && !evidence['waste_evidence'] && !evidence['remission']) {
-            nextStep = '7';
-        }
-        // Si tiene waste_evidence o remission pero no ticket_recibido ni no_ticket_reason, siguiente paso es 8 (¿Hay Ticket de Recibido?)
-        else if ((evidence['waste_evidence'] || evidence['remission']) && !evidence['ticket_recibido'] && !evidence['no_ticket_reason']) {
-            nextStep = '8';
-        }
-        // Si tiene ticket_recibido o no_ticket_reason pero no ticket_merma, siguiente paso es 8c (¿Hay Ticket de Merma?)
-        else if ((evidence['ticket_recibido'] || evidence['no_ticket_reason']) && !evidence['ticket_merma']) {
-            nextStep = '8c';
-        }
-        // Si tiene todo, siguiente paso es finish
-        else {
-            nextStep = 'finish';
-        }
-    } else if (report.tipo_reporte === 'tienda_cerrada') {
-        nextStep = 'tienda_abierta_check'; // Preguntar si se abrió la tienda
-    } else if (report.tipo_reporte === 'bascula') {
-        nextStep = 'finish'; // Báscula solo tiene un paso de evidencia y luego termina
-    }
-
-    // Guardar el siguiente paso en la base de datos
-    await supabase
-        .from('reportes')
-        .update({ current_step: nextStep })
-        .eq('id', reportId)
-        .eq('user_id', user.id);
-
-    // Retornar el siguiente paso para que el cliente haga la redirección
-    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
-    return { success: true, nextStep, flowUrl: `/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}` };
+    // No calculamos el siguiente paso aquí.
+    // El chat-interface mostrará el ResolutionTypeStep inline después de esta llamada.
+    // ResolutionTypeStep llama saveResolutionType() y luego navega al paso correcto.
+    revalidatePath(`/conductor/chat/${reportId}`);
+    return { success: true };
 }
 
 export async function saveTicketData(reportId: string, ticketData: any) {
@@ -826,6 +788,101 @@ export async function saveTicketMermaData(reportId: string, ticketData: any) {
     }
 
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/ticket-merma-review`);
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true };
+}
+
+export async function saveResolutionType(
+    reportId: string,
+    resolutionType: 'completa' | 'parcial' | 'sin_entrega' | 'timed_out',
+    partialFailureItems?: string[]
+) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    const updateData: Record<string, any> = {
+        resolution_type: resolutionType,
+    };
+
+    if (resolutionType === 'parcial' && partialFailureItems) {
+        updateData.partial_failure_items = partialFailureItems;
+    }
+
+    // Para timed_out: también avanzar el current_step a '6' para que el flujo continúe
+    if (resolutionType === 'timed_out') {
+        updateData.current_step = '6';
+    } else if (resolutionType === 'sin_entrega') {
+        updateData.current_step = 'finish';
+    } else {
+        // completa o parcial → continuar con el acomodado del producto
+        updateData.current_step = '6';
+    }
+
+    const { error } = await supabase
+        .from('reportes')
+        .update(updateData)
+        .eq('id', reportId)
+        .eq('user_id', user.id);
+
+    if (error) {
+        console.error('Error saving resolution type:', error);
+        return { error: 'Error al guardar tipo de resolución' };
+    }
+
+    revalidatePath(`/conductor/chat/${reportId}`);
+    revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
+    return { success: true, nextStep: updateData.current_step as string };
+}
+
+export async function saveOtherIncident(
+    reportId: string,
+    description: string,
+    imageFile?: File
+) {
+    const supabase = await createClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: 'No autorizado' };
+
+    const { data: report } = await supabase
+        .from('reportes')
+        .select('id, metadata')
+        .eq('id', reportId)
+        .eq('user_id', user.id)
+        .single();
+
+    if (!report) return { error: 'Reporte no encontrado' };
+
+    const currentMetadata = (report.metadata as Record<string, any>) || {};
+    const updatedMetadata: Record<string, any> = {
+        ...currentMetadata,
+        other_incident_description: description,
+    };
+
+    if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        const uploadResult = await uploadEvidence(reportId, 'other_incident_photo', formData);
+        if (uploadResult.error) return { error: uploadResult.error };
+        updatedMetadata.other_incident_photo = uploadResult.url;
+    }
+
+    const { error: updateError } = await supabase
+        .from('reportes')
+        .update({ metadata: updatedMetadata })
+        .eq('id', reportId);
+
+    if (updateError) {
+        console.error('Error saving other incident:', updateError);
+        return { error: 'Error al guardar incidencia adicional' };
+    }
+
     revalidatePath(`/conductor/nuevo-reporte/${reportId}/flujo`);
     return { success: true };
 }

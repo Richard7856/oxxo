@@ -109,44 +109,60 @@ export default function TicketDashboard({ ticketData, incidentDetails }: TicketD
                 </div>
             </div>
 
-            {/* Resumen de Entregas */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de Entregas</h3>
+            {/* Resumen de Entregas - RECIBIDO */}
+            <div className="bg-blue-50 rounded-lg p-6 border-2 border-blue-300 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-blue-900">📦 Lo Recibido (Ticket de Entrega)</h3>
+                    <span className="px-3 py-1 bg-blue-200 text-blue-900 rounded-full text-xs font-bold">
+                        RECIBIDO
+                    </span>
+                </div>
+                <p className="text-sm text-blue-700 mb-4">
+                    Cantidad total de productos que se recibieron en la tienda según el ticket de entrega.
+                </p>
                 <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <p className="text-sm text-gray-600 mb-1">Peso Total Entregado</p>
-                        <p className="text-xl font-bold text-gray-900">
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <p className="text-sm text-blue-600 mb-1 font-medium">Peso Total Recibido</p>
+                        <p className="text-2xl font-bold text-blue-900">
                             {totalPesoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
                         </p>
                     </div>
-                    <div>
-                        <p className="text-sm text-gray-600 mb-1">Costo Total Entregado</p>
-                        <p className="text-xl font-bold text-gray-900">
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <p className="text-sm text-blue-600 mb-1 font-medium">Costo Total Recibido</p>
+                        <p className="text-2xl font-bold text-blue-900">
                             ${totalCostoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                     </div>
-                    <div>
-                        <p className="text-sm text-gray-600 mb-1">Peso Promedio por Producto</p>
-                        <p className="text-xl font-bold text-gray-900">
-                            {totalProductos > 0 ? (totalPesoEntregado / totalProductos).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} kg
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <p className="text-sm text-blue-600 mb-1 font-medium">Total de Productos</p>
+                        <p className="text-2xl font-bold text-blue-900">
+                            {totalProductos}
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Merma */}
+            {/* Merma - RETIRADO */}
             {mermaTotal > 0 && (
-                <div className="bg-red-50 rounded-lg p-6 border border-red-200">
-                    <h3 className="text-lg font-semibold text-red-900 mb-4">Merma</h3>
+                <div className="bg-red-50 rounded-lg p-6 border-2 border-red-300 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-red-900">🗑️ Lo Retirado/Merma (Ticket de Merma)</h3>
+                        <span className="px-3 py-1 bg-red-200 text-red-900 rounded-full text-xs font-bold">
+                            MERMA
+                        </span>
+                    </div>
+                    <p className="text-sm text-red-700 mb-4">
+                        Cantidad de productos que se retiraron o desperdiciaron por mal estado, caducados o dañados.
+                    </p>
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <p className="text-sm text-red-600 mb-1">Peso Total de Merma</p>
+                        <div className="bg-white rounded-lg p-4 border border-red-200">
+                            <p className="text-sm text-red-600 mb-1 font-medium">Peso Total de Merma</p>
                             <p className="text-2xl font-bold text-red-900">
                                 {mermaTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
                             </p>
                         </div>
-                        <div>
-                            <p className="text-sm text-red-600 mb-1">Costo Total de Merma</p>
+                        <div className="bg-white rounded-lg p-4 border border-red-200">
+                            <p className="text-sm text-red-600 mb-1 font-medium">Costo Total de Merma</p>
                             <p className="text-2xl font-bold text-red-900">
                                 ${mermaCosto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
@@ -174,20 +190,34 @@ export default function TicketDashboard({ ticketData, incidentDetails }: TicketD
                 </div>
             )}
 
-            {/* Valores Reales (Entregado - Merma) */}
-            <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-                <h3 className="text-lg font-semibold text-green-900 mb-4">Valores Reales (Entregado - Merma)</h3>
+            {/* Valores Reales (Recibido - Merma) */}
+            <div className="bg-green-50 rounded-lg p-6 border-2 border-green-300 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-green-900">✅ Valor Real Final (Recibido - Merma)</h3>
+                    <span className="px-3 py-1 bg-green-200 text-green-900 rounded-full text-xs font-bold">
+                        NETO
+                    </span>
+                </div>
+                <p className="text-sm text-green-700 mb-4">
+                    Cantidad final que quedó en la tienda después de retirar la merma. Es decir: Lo Recibido menos Lo Retirado.
+                </p>
                 <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm text-green-600 mb-1">Peso Real Entregado</p>
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                        <p className="text-sm text-green-600 mb-1 font-medium">Peso Real Final</p>
                         <p className="text-2xl font-bold text-green-900">
                             {totalPesoReal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
                         </p>
+                        <p className="text-xs text-green-600 mt-1">
+                            {totalPesoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} kg - {mermaTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })} kg
+                        </p>
                     </div>
-                    <div>
-                        <p className="text-sm text-green-600 mb-1">Costo Real Entregado</p>
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                        <p className="text-sm text-green-600 mb-1 font-medium">Costo Real Final</p>
                         <p className="text-2xl font-bold text-green-900">
                             ${totalCostoReal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                            ${totalCostoEntregado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} - ${mermaCosto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                         </p>
                     </div>
                 </div>

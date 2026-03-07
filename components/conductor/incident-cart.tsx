@@ -85,17 +85,11 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
             formData.append('file', file);
             const result = await uploadEvidence(reportId, `incident_photo_${Date.now()}`, formData);
             if (result.error) throw new Error(result.error);
-            // Guardar la URL del servidor, no el objeto local
-            if (result.url) {
-                setPhotoPreview(result.url);
-            } else {
-                // Fallback: usar objeto local si no hay URL del servidor
-                const objectUrl = URL.createObjectURL(file);
-                setPhotoPreview(objectUrl);
-            }
+            if (!result.url) throw new Error('No se recibió URL de la imagen subida');
+            setPhotoPreview(result.url);
         } catch (err) {
             console.error('Error uploading photo:', err);
-            alert('Error al subir la foto');
+            alert('Error al subir la foto. Intenta nuevamente.');
         } finally {
             setUploadingPhoto(false);
         }

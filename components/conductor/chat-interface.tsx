@@ -3,8 +3,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { sendMessage, resolveReport, initializeChat, uploadChatImage, saveTiendaAbiertaStatus } from '@/app/conductor/actions';
+import {
+    sendMessage,
+    resolveReport,
+    initializeChat,
+    uploadChatImage,
+    saveTiendaAbiertaStatus,
+    saveResolutionType,
+    updateCurrentStep,
+} from '@/app/conductor/actions';
 import { MessageSender } from '@/lib/types/database.types';
+import ResolutionTypeStep from '@/components/conductor/resolution-type-step';
 
 interface Message {
     id: string;
@@ -15,13 +24,23 @@ interface Message {
     created_at: string;
 }
 
+export interface IncidentItem {
+    id: string;
+    productName: string;
+    quantity: string;
+    reason: string;
+    note: string;
+    photoUrl?: string | null;
+}
+
 interface ChatInterfaceProps {
     reportId: string;
-    userId: string; // Added userId prop
-    reportCreatedAt: string; // New prop for persistent timer
+    userId: string;
+    reportCreatedAt: string;
     initialMessages: Message[];
-    timeoutAt?: string | null; // Timeout timestamp
-    reportType?: string | null; // Tipo de reporte para manejar timeout automático
+    timeoutAt?: string | null;
+    reportType?: string | null;
+    incidentDetails?: IncidentItem[] | null; // Para pasar al ResolutionTypeStep
 }
 
 function usePersistentTimer(timeoutAt: string | null | undefined) {
@@ -44,7 +63,7 @@ function usePersistentTimer(timeoutAt: string | null | undefined) {
             setIsExpired(remaining === 0);
         };
 
-        calculateTimeLeft(); // Initial calc
+        calculateTimeLeft();
 
         const interval = setInterval(calculateTimeLeft, 1000);
         return () => clearInterval(interval);
@@ -57,7 +76,15 @@ function usePersistentTimer(timeoutAt: string | null | undefined) {
     return { formatted, isExpired, timeLeft };
 }
 
-export default function ChatInterface({ reportId, userId, reportCreatedAt, initialMessages, timeoutAt: initialTimeoutAt, reportType }: ChatInterfaceProps) {
+export default function ChatInterface({
+    reportId,
+    userId,
+    reportCreatedAt,
+    initialMessages,
+    timeoutAt: initialTimeoutAt,
+    reportType,
+    incidentDetails,
+}: ChatInterfaceProps) {
     const router = useRouter();
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [newMessage, setNewMessage] = useState('');
@@ -68,6 +95,8 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [showResolutionSelector, setShowResolutionSelector] = useState(false);
+    const [hasAutoTimedOut, setHasAutoTimedOut] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const supabase = createClient();
@@ -75,41 +104,66 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
     // Inicializar el chat cuando se monta el componente
     useEffect(() => {
         if (!initialized) {
-            initializeChat(reportId).then((result) => {
-                if (result?.success && result?.timeoutAt) {
-                    setTimeoutAt(result.timeoutAt);
-                }
-                setInitialized(true);
-            }).catch((error) => {
-                console.error('Error initializing chat:', error);
-                setInitialized(true);
-            });
+            initializeChat(reportId)
+                .then((result) => {
+                    if (result?.success && result?.timeoutAt) {
+                        setTimeoutAt(result.timeoutAt);
+                    }
+                    setInitialized(true);
+                })
+                .catch((error) => {
+                    console.error('Error initializing chat:', error);
+                    setInitialized(true);
+                });
         }
     }, [reportId, initialized]);
 
     const { formatted: timeFormatted, isExpired } = usePersistentTimer(timeoutAt);
-    const [hasAutoClosed, setHasAutoClosed] = useState(false);
 
-    // Auto-cerrar reporte de tienda_cerrada si expira el timeout
+    // Auto-cierre cuando expira el timeout según tipo de reporte
     useEffect(() => {
-        if (isExpired && reportType === 'tienda_cerrada' && !hasAutoClosed) {
-            setHasAutoClosed(true);
-            // Cerrar automáticamente el reporte (como si el usuario hubiera dicho "No se abrió")
-            saveTiendaAbiertaStatus(reportId, false).then((result) => {
-                if (result.success && result.flowUrl) {
-                    router.push(result.flowUrl);
-                }
-            }).catch((err) => {
-                console.error('Error auto-closing tienda cerrada report:', err);
-            });
+        if (!isExpired || hasAutoTimedOut) return;
+
+        // Tienda cerrada y báscula: auto-cerrar como "no se abrió / no se resolvió"
+        if (reportType === 'tienda_cerrada' || reportType === 'bascula') {
+            setHasAutoTimedOut(true);
+            saveTiendaAbiertaStatus(reportId, false)
+                .then((result) => {
+                    if (result.success && result.flowUrl) {
+                        router.push(result.flowUrl);
+                    }
+                })
+                .catch((err) => {
+                    console.error('Error auto-closing report on timeout:', err);
+                });
+            return;
         }
-    }, [isExpired, reportType, reportId, hasAutoClosed, router]);
+
+        // Entrega con incidencias: guardar timed_out y continuar al paso 6
+        if (reportType === 'entrega' && incidentDetails && incidentDetails.length > 0) {
+            setHasAutoTimedOut(true);
+            resolveReport(reportId)
+                .then(() => saveResolutionType(reportId, 'timed_out'))
+                .then((result) => {
+                    if (result && 'error' in result && result.error) {
+                        console.error('Error saving timed_out resolution:', result.error);
+                        return;
+                    }
+                    return updateCurrentStep(reportId, '6');
+                })
+                .then(() => {
+                    router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=6`);
+                })
+                .catch((err) => {
+                    console.error('Error auto-continuing on entrega timeout:', err);
+                });
+        }
+    }, [isExpired, reportType, reportId, hasAutoTimedOut, incidentDetails, router]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Scroll to bottom on new message
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -117,14 +171,14 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
     // Realtime subscription
     useEffect(() => {
         const channel = supabase
-            .channel('chat_messages') // Changed channel name
+            .channel(`chat_messages_${reportId}`)
             .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'messages',
-                    filter: `reporte_id=eq.${reportId}`, // Changed filter field
+                    filter: `reporte_id=eq.${reportId}`,
                 },
                 (payload) => {
                     const newMsg = payload.new as Message;
@@ -137,7 +191,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [reportId, supabase]); // Added supabase to dependency
+    }, [reportId, supabase]);
 
     async function handleSend(e?: React.FormEvent) {
         e?.preventDefault();
@@ -147,12 +201,11 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
         let imageUrl: string | null = null;
 
         try {
-            // Si hay imagen seleccionada, subirla primero
             if (selectedImage) {
                 setUploadingImage(true);
                 const formData = new FormData();
                 formData.append('file', selectedImage);
-                
+
                 const uploadResult = await uploadChatImage(reportId, formData);
                 if (uploadResult.error) {
                     alert(uploadResult.error);
@@ -164,15 +217,12 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                 setUploadingImage(false);
             }
 
-            // Enviar mensaje con texto e imagen
             const result = await sendMessage(reportId, newMessage || '', imageUrl);
             if (result?.error) {
                 alert(result.error);
                 return;
             }
-            
-            // El mensaje se agregará automáticamente via realtime subscription
-            // Solo limpiamos el input
+
             setNewMessage('');
             setSelectedImage(null);
             setImagePreview(null);
@@ -192,21 +242,18 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validar tipo
         if (!file.type.startsWith('image/')) {
             alert('Por favor selecciona una imagen');
             return;
         }
 
-        // Validar tamaño (10MB)
         if (file.size > 10 * 1024 * 1024) {
             alert('La imagen es demasiado grande (máximo 10MB)');
             return;
         }
 
         setSelectedImage(file);
-        
-        // Crear preview
+
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
@@ -230,14 +277,13 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
             if (result?.error) {
                 alert(result.error);
                 setResolving(false);
-            } else if (result?.success && result?.flowUrl) {
-                // Redirigir al siguiente paso del flujo
-                router.push(result.flowUrl);
+            } else {
+                // Mostrar el selector de resolución inline en lugar de redirigir
+                setShowResolutionSelector(true);
+                setResolving(false);
             }
         } catch (error: any) {
-            // Ignorar errores de redirect de Next.js
             if (error?.digest?.startsWith('NEXT_REDIRECT') || error?.message?.includes('NEXT_REDIRECT')) {
-                // El redirect se está procesando, no hacer nada
                 return;
             }
             console.error('Error resolving report:', error);
@@ -246,10 +292,18 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
         }
     }
 
+    // Los reportes de tienda_cerrada y bascula no usan el botón "Problema Resuelto"
+    // sino sus propios botones de "Se abrió / No se abrió" en la página del chat
+    const showResolveButton = reportType !== 'tienda_cerrada' && reportType !== 'bascula';
+
     return (
-        <div className="flex flex-col h-[calc(100vh-12rem)]"> {/* Fixed height container */}
-            {/* Header info / Timer */}
-            <div className={`p-6 rounded-lg text-center mb-6 border ${isExpired ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+        <div className="flex flex-col h-[calc(100vh-12rem)]">
+            {/* Header / Timer */}
+            <div
+                className={`p-6 rounded-lg text-center mb-6 border ${
+                    isExpired ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
+                }`}
+            >
                 <h2 className={`${isExpired ? 'text-red-800' : 'text-blue-800'} font-semibold mb-2`}>
                     {isExpired ? 'Tiempo de espera finalizado' : 'Tiempo de espera estimado'}
                 </h2>
@@ -257,23 +311,32 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                     {timeFormatted}
                 </div>
                 <p className={`${isExpired ? 'text-red-600' : 'text-blue-600'} text-sm`}>
-                    {isExpired ? 'El chat se ha cerrado. Por favor continúa con el proceso.' : 'Un agente te atenderá pronto.'}
+                    {isExpired
+                        ? 'El chat se ha cerrado. Por favor continúa con el proceso.'
+                        : 'Un agente te atenderá pronto.'}
                 </p>
             </div>
 
-            {/* Resolve Button - No visible para tienda_cerrada (solo comercial puede cerrar) */}
-            {reportType !== 'tienda_cerrada' && (
+            {/* Resolución inline (después de hacer click en "Problema Resuelto") */}
+            {showResolutionSelector && (
+                <ResolutionTypeStep
+                    reportId={reportId}
+                    incidentDetails={incidentDetails || []}
+                    onComplete={(nextStep) => {
+                        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=${nextStep}`);
+                    }}
+                />
+            )}
+
+            {/* Botón "Problema Resuelto" — solo para entrega, no para tienda_cerrada ni bascula */}
+            {showResolveButton && !showResolutionSelector && (
                 <div className="mb-4">
                     <button
                         onClick={handleResolve}
                         disabled={resolving}
                         className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow hover:bg-green-700 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
                     >
-                        {resolving ? 'Procesando...' : (
-                            <>
-                                <span>✅ Problema Resuelto / Continuar</span>
-                            </>
-                        )}
+                        {resolving ? 'Procesando...' : '✅ Problema Resuelto / Continuar'}
                     </button>
                 </div>
             )}
@@ -288,18 +351,20 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                 ) : (
                     <div className="space-y-4">
                         {messages.map((msg) => {
-                            // Check if message is from me. Prioritize sender_user_id, fallback to sender enum
-                            const isMe = (msg.sender_user_id && msg.sender_user_id === userId) || msg.sender === 'user';
+                            const isMe =
+                                (msg.sender_user_id && msg.sender_user_id === userId) ||
+                                msg.sender === 'user';
                             return (
                                 <div
                                     key={msg.id}
                                     className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                                 >
                                     <div
-                                        className={`max-w-[80%] rounded-lg p-3 ${isMe
+                                        className={`max-w-[80%] rounded-lg p-3 ${
+                                            isMe
                                                 ? 'bg-blue-600 text-white rounded-br-none'
                                                 : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
-                                            }`}
+                                        }`}
                                     >
                                         {msg.image_url && (
                                             <div className="mb-2 rounded-lg overflow-hidden">
@@ -312,8 +377,15 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                                             </div>
                                         )}
                                         {msg.text && <p className="text-sm">{msg.text}</p>}
-                                        <span className={`text-xs block mt-1 ${isMe ? 'text-blue-100' : 'text-gray-700'}`}>
-                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        <span
+                                            className={`text-xs block mt-1 ${
+                                                isMe ? 'text-blue-100' : 'text-gray-700'
+                                            }`}
+                                        >
+                                            {new Date(msg.created_at).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
                                         </span>
                                     </div>
                                 </div>
@@ -367,7 +439,7 @@ export default function ChatInterface({ reportId, userId, reportCreatedAt, initi
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder={isExpired ? "Chat cerrado" : "Escribe un mensaje..."}
+                    placeholder={isExpired ? 'Chat cerrado' : 'Escribe un mensaje...'}
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-700 bg-white disabled:bg-gray-100 disabled:text-gray-700"
                     disabled={isExpired || sending || uploadingImage}
                 />

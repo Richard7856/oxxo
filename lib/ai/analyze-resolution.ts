@@ -1,13 +1,9 @@
 /**
- * OpenAI Chat Resolution Analysis
- * Analyzes conductor messages to detect if issue is resolved
+ * Claude Chat Resolution Analysis
+ * Analyzes conductor messages to detect if a delivery issue is resolved
  */
 
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+import Anthropic from '@anthropic-ai/sdk';
 
 export interface ChatMessage {
     sender: 'user' | 'agent' | 'system';
@@ -21,7 +17,7 @@ export interface ResolutionAnalysis {
     reasoning: string;
 }
 
-const ANALYSIS_PROMPT = `Eres un asistente que analiza conversaciones de chat para detectar si un problema de entrega ha sido resuelto.
+const ANALYSIS_SYSTEM_PROMPT = `Eres un asistente que analiza conversaciones de chat para detectar si un problema de entrega ha sido resuelto.
 
 Analiza el mensaje del conductor y el contexto de la conversación para determinar si el problema está resuelto.
 
@@ -41,11 +37,11 @@ Indicadores de NO resolución:
 Responde SOLO con JSON válido:
 {
   "isResolved": boolean,
-  "confidence": number entre 0.0 y 1.0,
+  "confidence": número entre 0.0 y 1.0,
   "reasoning": "breve explicación de 1-2 oraciones"
 }
 
-IMPORTANTE: 
+IMPORTANTE:
 - Solo marca isResolved=true si la confianza es >= 0.7
 - Si hay dudas, marca como no resuelto
 - No inventes información`;
@@ -61,14 +57,21 @@ export async function analyzeChatResolution(
         chatHistory: ChatMessage[];
     }
 ): Promise<ResolutionAnalysis> {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        console.error('ANTHROPIC_API_KEY no está configurada');
+        return { isResolved: false, confidence: 0.0, reasoning: 'Error de configuración' };
+    }
+
+    const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
     try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4-turbo-preview',
+        const response = await anthropic.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 200,
+            system: ANALYSIS_SYSTEM_PROMPT,
             messages: [
-                {
-                    role: 'system',
-                    content: ANALYSIS_PROMPT,
-                },
                 {
                     role: 'user',
                     content: JSON.stringify({
@@ -82,14 +85,10 @@ export async function analyzeChatResolution(
                     }),
                 },
             ],
-            temperature: 0.1,
-            max_tokens: 200,
         });
 
-        const content = response.choices[0].message.content;
-        if (!content) {
-            throw new Error('No content in OpenAI response');
-        }
+        const content = response.content[0].type === 'text' ? response.content[0].text : '';
+        if (!content) throw new Error('No content in Claude response');
 
         const analysis = JSON.parse(content);
 
@@ -105,8 +104,6 @@ export async function analyzeChatResolution(
         };
     } catch (error) {
         console.error('Error analyzing chat resolution:', error);
-
-        // On error, assume not resolved
         return {
             isResolved: false,
             confidence: 0.0,
