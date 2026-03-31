@@ -3,40 +3,62 @@
   "short_name": "Verdefrut",
   "description": "Sistema de gestión de entregas e incidencias Verdefrut",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#dc2626",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#1D6B2A",
+  "theme_color": "#1D6B2A",
   "orientation": "portrait-primary",
+  "lang": "es-MX",
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["business", "productivity"],
-  "screenshots": [],
   "shortcuts": [
     {
-      "name": "Panel Comercial",
-      "short_name": "Comercial",
-      "description": "Acceso rápido al panel comercial",
-      "url": "/comercial",
+      "name": "Nuevo Reporte",
+      "short_name": "Reporte",
+      "description": "Crear un nuevo reporte de entrega",
+      "url": "/conductor/nuevo-reporte",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Conductor",
+      "name": "Panel Conductor",
       "short_name": "Conductor",
-      "description": "Acceso rápido al panel de conductor",
+      "description": "Acceso al panel de conductor",
       "url": "/conductor",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Panel Comercial",
+      "short_name": "Comercial",
+      "description": "Monitorear reportes y dar soporte",
+      "url": "/comercial",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }
