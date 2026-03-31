@@ -33,10 +33,10 @@ export default function LoginPage() {
             {/* Left panel — brand */}
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1D6B2A] to-[#0f4019] flex-col items-center justify-center p-12">
                 <Image
-                    src="/logo-verdefrut.jpeg"
+                    src="/logo-verdefrut.png"
                     alt="Verdefrut"
-                    width={320}
-                    height={200}
+                    width={220}
+                    height={130}
                     className="object-contain mb-8"
                     priority
                 />
@@ -49,12 +49,12 @@ export default function LoginPage() {
             <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gray-50">
                 <div className="max-w-md w-full">
                     {/* Mobile logo */}
-                    <div className="lg:hidden text-center mb-8">
+                    <div className="lg:hidden text-center mb-6">
                         <Image
-                            src="/logo-verdefrut.jpeg"
+                            src="/logo-verdefrut.png"
                             alt="Verdefrut"
-                            width={200}
-                            height={120}
+                            width={140}
+                            height={70}
                             className="object-contain mx-auto"
                             priority
                         />

@@ -49,8 +49,8 @@ export default async function ConductorPage() {
     return (
         <div className="max-w-2xl mx-auto">
             {/* Logo header */}
-            <div className="flex items-center justify-center py-4 mb-2">
-                <Image src="/logo-verdefrut.jpeg" alt="Verdefrut" width={140} height={56} className="object-contain" priority />
+            <div className="flex items-center justify-center py-3 mb-2">
+                <Image src="/logo-verdefrut.png" alt="Verdefrut" width={100} height={40} className="object-contain" priority />
             </div>
 
             {/* PWA Install Button */}

@@ -29,12 +29,12 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1D6B2A] via-[#155120] to-[#0f3a17]">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto">
         <Image
-          src="/logo-verdefrut.jpeg"
+          src="/logo-verdefrut.png"
           alt="Verdefrut"
-          width={160}
-          height={60}
+          width={100}
+          height={40}
           className="object-contain"
           priority
         />
