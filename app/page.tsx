@@ -28,21 +28,23 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1D6B2A] via-[#155120] to-[#0f3a17]">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto">
-        <Image
-          src="/logo-verdefrut.png"
-          alt="Verdefrut"
-          width={100}
-          height={40}
-          className="object-contain"
-          priority
-        />
-        {user && <LogoutButton />}
+      {/* Top bar — fondo blanco para que el logo verde sea visible */}
+      <div className="bg-white/95 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-2 max-w-5xl mx-auto">
+          <Image
+            src="/logo-verdefrut.png"
+            alt="Verdefrut"
+            width={110}
+            height={44}
+            className="object-contain"
+            priority
+          />
+          {user && <LogoutButton />}
+        </div>
       </div>
 
       {/* Main */}
-      <div className="max-w-5xl mx-auto px-4 pb-12">
+      <div className="max-w-5xl mx-auto px-4 pb-12 pt-8">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2">
             Sistema de Gestión
