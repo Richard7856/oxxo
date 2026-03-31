@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { usePersistentTimer } from '@/lib/hooks/use-persistent-timer';
 import {
     sendMessage,
     resolveReport,
@@ -43,38 +44,6 @@ interface ChatInterfaceProps {
     incidentDetails?: IncidentItem[] | null; // Para pasar al ResolutionTypeStep
 }
 
-function usePersistentTimer(timeoutAt: string | null | undefined) {
-    const [timeLeft, setTimeLeft] = useState(0);
-    const [isExpired, setIsExpired] = useState(false);
-
-    useEffect(() => {
-        if (!timeoutAt) {
-            setIsExpired(false);
-            setTimeLeft(0);
-            return;
-        }
-
-        const calculateTimeLeft = () => {
-            const end = new Date(timeoutAt).getTime();
-            const now = new Date().getTime();
-            const remaining = Math.max(0, Math.floor((end - now) / 1000));
-
-            setTimeLeft(remaining);
-            setIsExpired(remaining === 0);
-        };
-
-        calculateTimeLeft();
-
-        const interval = setInterval(calculateTimeLeft, 1000);
-        return () => clearInterval(interval);
-    }, [timeoutAt]);
-
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    const formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-    return { formatted, isExpired, timeLeft };
-}
 
 export default function ChatInterface({
     reportId,
@@ -225,7 +194,10 @@ export default function ChatInterface({
 
             setNewMessage('');
             setSelectedImage(null);
-            setImagePreview(null);
+            setImagePreview(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
@@ -254,16 +226,19 @@ export default function ChatInterface({
 
         setSelectedImage(file);
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+        // blob URL is far cheaper than base64 from FileReader — no large string in state
+        setImagePreview(prev => {
+            if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+        });
     }
 
     function removeSelectedImage() {
         setSelectedImage(null);
-        setImagePreview(null);
+        setImagePreview(prev => {
+            if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return null;
+        });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }

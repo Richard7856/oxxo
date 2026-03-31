@@ -292,7 +292,7 @@ export default function EvidenceUpload({
             <button
                 onClick={onContinue}
                 disabled={!previewUrl || uploading || loading || processing}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full bg-[#1D6B2A] hover:bg-[#155120] text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
                 {loading || uploading || processing ? 'Procesando...' : 'Continuar'}
             </button>

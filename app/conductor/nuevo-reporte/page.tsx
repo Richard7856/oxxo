@@ -57,7 +57,7 @@ export default async function NuevoReportePage() {
             <div className="mb-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                        <div className="flex items-center justify-center w-10 h-10 bg-red-600 text-white rounded-full font-semibold">
+                        <div className="flex items-center justify-center w-10 h-10 bg-[#1D6B2A] text-white rounded-full font-semibold">
                             1
                         </div>
                         <span className="ml-3 font-medium text-gray-900">

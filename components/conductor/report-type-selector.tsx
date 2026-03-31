@@ -205,7 +205,7 @@ export default function ReportTypeSelector({
                 <button
                     onClick={handleContinue}
                     disabled={!selectedType || loading}
-                    className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="bg-[#1D6B2A] hover:bg-[#155120] text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Guardando...' : 'Continuar'}
                 </button>

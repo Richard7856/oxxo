@@ -209,7 +209,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                                 setProductName(value);
                             }
                         }}
-                        className="w-full border-2 border-gray-300 p-2.5 rounded-lg text-gray-900 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        className="w-full border-2 border-gray-300 p-2.5 rounded-lg text-gray-900 focus:border-red-500 focus:ring-1 focus:ring-[#1D6B2A]"
                     >
                         <option value="">Seleccionar...</option>
                         <option value="TODOS" className="font-bold">📦 Todos los productos</option>
@@ -233,7 +233,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                         inputMode="decimal"
                         value={quantity}
                         onChange={(e) => setQuantity(e.target.value)}
-                        className="w-full border-2 border-gray-300 p-2.5 rounded-lg text-gray-900 placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        className="w-full border-2 border-gray-300 p-2.5 rounded-lg text-gray-900 placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-[#1D6B2A]"
                         placeholder={allProducts ? "Cantidad para todos los productos" : productName && PRODUCTS_WITH_UNITS[productName] 
                             ? `Ej. 1.5 ${PRODUCTS_WITH_UNITS[productName]}` 
                             : "Ej. 1.5 kg o 3 pz"}
@@ -257,7 +257,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                                             setPhotoPreview(null);
                                         }
                                     }}
-                                    className="text-red-600 focus:ring-red-500"
+                                    className="text-red-600 focus:ring-[#1D6B2A]"
                                 />
                                 <span className="text-sm font-medium text-gray-900">{r}</span>
                             </label>
@@ -318,7 +318,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
                     <textarea
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
-                        className="w-full border-2 border-gray-300 p-2.5 rounded-lg text-gray-900 placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        className="w-full border-2 border-gray-300 p-2.5 rounded-lg text-gray-900 placeholder-gray-500 focus:border-red-500 focus:ring-1 focus:ring-[#1D6B2A]"
                         rows={2}
                         placeholder="Detalles adicionales..."
                     />
@@ -380,7 +380,7 @@ export default function IncidentCart({ reportId }: IncidentCartProps) {
             <button
                 onClick={handleSubmit}
                 disabled={items.length === 0 || loading}
-                className="w-full bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg hover:bg-red-700 transition-transformation transform active:scale-95 disabled:bg-gray-400 disabled:transform-none"
+                className="w-full bg-[#1D6B2A] text-white font-bold py-4 rounded-lg shadow-lg hover:bg-[#155120] transition-transformation transform active:scale-95 disabled:bg-gray-400 disabled:transform-none"
             >
                 {loading ? 'Enviando...' : 'Crear Reporte y Chatear'}
             </button>

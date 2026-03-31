@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
-import { ReporteState } from '@/lib/state-machines/reporte-state';
+
+// Inline type — the state machine file was removed; states are enforced here directly
+type ReporteState = 'draft' | 'submitted' | 'resolved_by_driver' | 'timed_out' | 'completed' | 'archived';
 
 // Fields that clients are allowed to update via PATCH
 const ALLOWED_FIELDS = new Set([

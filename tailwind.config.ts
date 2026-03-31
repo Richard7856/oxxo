@@ -11,6 +11,13 @@ const config: Config = {
             colors: {
                 background: "var(--background)",
                 foreground: "var(--foreground)",
+                // Verdefrut brand colors — extracted from logo
+                vf: {
+                    green: '#1D6B2A',       // Dark green (Ver)
+                    'green-light': '#4CAF50', // Accent green
+                    orange: '#E85D04',      // Orange (Frut)
+                    'orange-light': '#F47820',
+                },
             },
         },
     },

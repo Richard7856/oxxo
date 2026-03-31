@@ -1,7 +1,7 @@
 {
-  "name": "OXXO Logistics",
-  "short_name": "OXXO Logistics",
-  "description": "Sistema de gestión de entregas e incidencias para tiendas OXXO",
+  "name": "Verdefrut",
+  "short_name": "Verdefrut",
+  "description": "Sistema de gestión de entregas e incidencias Verdefrut",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -40,8 +40,3 @@
     }
   ]
 }
-
-
-
-
-

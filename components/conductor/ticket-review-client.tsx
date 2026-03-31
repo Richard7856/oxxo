@@ -179,32 +179,15 @@ export default function TicketReviewClient({
     };
 
     const handleSave = async (data: ExtractedTicketData) => {
-        // Primero guardar los datos del ticket de recibido
         const saveResult = await saveTicketData(reportId, data);
         if (saveResult.error) {
             throw new Error(saveResult.error);
         }
-        
-        // Verificar si hay merma en el metadata del reporte
-        const reportResponse = await fetch(`/api/reportes/${reportId}`);
-        if (reportResponse.ok) {
-            const reportData = await reportResponse.json();
-            const metadata = reportData.metadata || {};
-            const hasMerma = metadata.has_merma;
-            
-            // Si no hay merma, ir directamente a finish
-            if (hasMerma === false) {
-                router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=finish`);
-                return;
-            }
-        }
-        
-        // Si hay merma o no se pudo verificar, preguntar por ticket de merma
-        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=8c`);
+        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=other_incident_check`);
     };
 
     const handleBack = () => {
-        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=8`);
+        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=receipt_check`);
     };
 
     if (loading) {

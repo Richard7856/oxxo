@@ -9,7 +9,7 @@ console.log(vapidKeys.publicKey);
 console.log('\nPrivate Key (VAPID_PRIVATE_KEY):');
 console.log(vapidKeys.privateKey);
 console.log('\nSubject (VAPID_SUBJECT - use your email or app URL):');
-console.log('mailto:admin@oxxo.com');
+console.log('mailto:admin@verdefrut.com');
 console.log('\n=== Add these to your .env.local file ===\n');
 
 

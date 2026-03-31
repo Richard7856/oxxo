@@ -38,17 +38,17 @@ export default async function TicketReviewPage({
 
     // Si no hay ticket de recibido y no hay razón, redirigir al flujo
     if (!ticketImageUrl && !noTicketReason) {
-        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=8`);
+        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=receipt_check`);
     }
 
-    // Si no hay ticket pero hay razón, redirigir directamente a return_check (no hay ticket para procesar)
+    // Si no hay ticket pero hay razón, el driver ya respondió que no tiene recibo
     if (!ticketImageUrl && noTicketReason) {
-        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=return_check`);
+        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=other_incident_check`);
     }
 
     // Si no hay ticket de recibido, no deberíamos estar aquí, pero por seguridad redirigir
     if (!ticketImageUrl) {
-        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=8`);
+        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=receipt_check`);
     }
 
     // Get existing ticket data if available

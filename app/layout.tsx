@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OXXO Logistics - Sistema de Gestión de Entregas",
-  description: "Sistema de gestión de entregas e incidencias para tiendas OXXO",
+  title: "Verdefrut - Sistema de Gestión de Entregas",
+  description: "Sistema de gestión de entregas e incidencias Verdefrut",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "OXXO Logistics",
+    title: "Verdefrut",
   },
   icons: {
     icon: "/icon-192.png",

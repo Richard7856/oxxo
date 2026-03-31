@@ -34,7 +34,7 @@ export default async function TicketMermaReviewPage({
     const ticketMermaImageUrl = evidence['ticket_merma'] || null;
 
     if (!ticketMermaImageUrl) {
-        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=8c`);
+        redirect(`/conductor/nuevo-reporte/${id}/flujo?step=7_waste_ticket`);
     }
 
     // Get existing ticket merma data if available

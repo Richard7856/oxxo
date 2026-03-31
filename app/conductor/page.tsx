@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import CancelReportButton from '@/components/conductor/cancel-report-button';
 import PWAInstallButton from '@/components/pwa-install-button';
@@ -47,6 +48,11 @@ export default async function ConductorPage() {
 
     return (
         <div className="max-w-2xl mx-auto">
+            {/* Logo header */}
+            <div className="flex items-center justify-center py-4 mb-2">
+                <Image src="/logo-verdefrut.jpeg" alt="Verdefrut" width={140} height={56} className="object-contain" priority />
+            </div>
+
             {/* PWA Install Button */}
             <PWAInstallButton />
             
@@ -84,9 +90,9 @@ export default async function ConductorPage() {
 
             {/* Welcome Card */}
             <div className="bg-white rounded-lg shadow p-8 text-center mb-8">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg
-                        className="w-10 h-10 text-red-600"
+                        className="w-10 h-10 text-[#1D6B2A]"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -107,7 +113,7 @@ export default async function ConductorPage() {
                 </p>
                 <Link
                     href="/conductor/nuevo-reporte"
-                    className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
+                    className="inline-block bg-[#1D6B2A] hover:bg-[#155120] text-white font-semibold py-3 px-8 rounded-lg transition-colors"
                 >
                     Crear Nuevo Reporte
                 </Link>

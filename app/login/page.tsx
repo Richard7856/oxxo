@@ -3,6 +3,7 @@
 import { login, signup } from './actions';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
@@ -28,168 +29,149 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center p-4">
-            <div className="max-w-md w-full">
-                {/* Logo/Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2">OXXO Logistics</h1>
-                    <p className="text-red-100">
-                        {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
-                    </p>
-                </div>
+        <div className="min-h-screen flex">
+            {/* Left panel — brand */}
+            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1D6B2A] to-[#0f4019] flex-col items-center justify-center p-12">
+                <Image
+                    src="/logo-verdefrut.jpeg"
+                    alt="Verdefrut"
+                    width={320}
+                    height={200}
+                    className="object-contain mb-8"
+                    priority
+                />
+                <p className="text-green-100 text-lg text-center max-w-sm">
+                    Sistema de Gestión de Entregas e Incidencias
+                </p>
+            </div>
 
-                {/* Login Card */}
-                <div className="bg-white rounded-lg shadow-xl p-8">
-                    {/* Tabs */}
-                    <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setMode('login');
-                                setError(null);
-                                setSuccess(null);
-                            }}
-                            className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${mode === 'login'
-                                ? 'bg-white text-red-600 shadow'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            Iniciar Sesión
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setMode('signup');
-                                setError(null);
-                                setSuccess(null);
-                            }}
-                            className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${mode === 'signup'
-                                ? 'bg-white text-red-600 shadow'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            Crear Cuenta
-                        </button>
+            {/* Right panel — form */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gray-50">
+                <div className="max-w-md w-full">
+                    {/* Mobile logo */}
+                    <div className="lg:hidden text-center mb-8">
+                        <Image
+                            src="/logo-verdefrut.jpeg"
+                            alt="Verdefrut"
+                            width={200}
+                            height={120}
+                            className="object-contain mx-auto"
+                            priority
+                        />
                     </div>
 
-                    <form action={handleSubmit} className="space-y-6">
-                        {/* Success Message */}
-                        {success && (
-                            <div className="bg-green-50 border-l-4 border-green-400 p-4">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <svg
-                                            className="h-5 w-5 text-green-400"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <p className="text-sm text-green-700">{success}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                            {mode === 'login' ? 'Bienvenido' : 'Crear cuenta'}
+                        </h2>
+                        <p className="text-gray-500 text-sm mb-6">
+                            {mode === 'login'
+                                ? 'Ingresa tus credenciales para continuar'
+                                : 'Completa el formulario para registrarte'}
+                        </p>
 
-                        {/* Error Message */}
-                        {error && (
-                            <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                                <div className="flex">
-                                    <div className="flex-shrink-0">
-                                        <svg
-                                            className="h-5 w-5 text-red-400"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <div className="ml-3">
-                                        <p className="text-sm text-red-700">{error}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Email Field */}
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                Correo Electrónico
-                            </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-500"
-                                placeholder="tu@email.com"
-                            />
+                        {/* Tabs */}
+                        <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+                            <button
+                                type="button"
+                                onClick={() => { setMode('login'); setError(null); setSuccess(null); }}
+                                className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-colors ${
+                                    mode === 'login'
+                                        ? 'bg-white text-[#1D6B2A] shadow font-semibold'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                Iniciar Sesión
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setMode('signup'); setError(null); setSuccess(null); }}
+                                className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-colors ${
+                                    mode === 'signup'
+                                        ? 'bg-white text-[#1D6B2A] shadow font-semibold'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                Crear Cuenta
+                            </button>
                         </div>
 
-                        {/* Password Field */}
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                Contraseña
-                            </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                                required
-                                minLength={6}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-500"
-                                placeholder="••••••••"
-                            />
-                            {mode === 'signup' && (
-                                <p className="mt-1 text-xs text-gray-800">
-                                    Mínimo 6 caracteres
-                                </p>
+                        <form action={handleSubmit} className="space-y-5">
+                            {/* Success */}
+                            {success && (
+                                <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                                    <p className="text-sm text-green-700">{success}</p>
+                                </div>
                             )}
+
+                            {/* Error */}
+                            {error && (
+                                <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded">
+                                    <p className="text-sm text-red-700">{error}</p>
+                                </div>
+                            )}
+
+                            {/* Email */}
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Correo Electrónico
+                                </label>
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    required
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1D6B2A] focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400 text-sm"
+                                    placeholder="tu@email.com"
+                                />
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Contraseña
+                                </label>
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                                    required
+                                    minLength={6}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1D6B2A] focus:border-transparent outline-none transition-all text-gray-900 placeholder-gray-400 text-sm"
+                                    placeholder="••••••••"
+                                />
+                                {mode === 'signup' && (
+                                    <p className="mt-1 text-xs text-gray-500">Mínimo 6 caracteres</p>
+                                )}
+                            </div>
+
+                            {/* Submit */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-[#1D6B2A] hover:bg-[#155120] text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+                            >
+                                {loading
+                                    ? (mode === 'login' ? 'Iniciando sesión...' : 'Creando cuenta...')
+                                    : (mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta')}
+                            </button>
+                        </form>
+
+                        {mode === 'signup' && (
+                            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                                <p className="text-xs text-orange-800">
+                                    💡 Al crear una cuenta tendrás rol de <strong>conductor</strong> por defecto. Un administrador puede cambiar tu rol después.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="mt-6 text-center">
+                            <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                                ← Volver al inicio
+                            </Link>
                         </div>
-
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        >
-                            {loading
-                                ? (mode === 'login' ? 'Iniciando sesión...' : 'Creando cuenta...')
-                                : (mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta')}
-                        </button>
-                    </form>
-
-                    {/* Info Text */}
-                    {mode === 'signup' && (
-                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                            <p className="text-xs text-blue-800">
-                                💡 Al crear una cuenta, podrás acceder al sistema inmediatamente.
-                                Por defecto tendrás rol de <strong>conductor</strong>.
-                                Un administrador puede cambiar tu rol después.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Divider */}
-                    <div className="mt-6 text-center">
-                        <Link
-                            href="/"
-                            className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                        >
-                            ← Volver al inicio
-                        </Link>
                     </div>
                 </div>
             </div>

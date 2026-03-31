@@ -9,7 +9,7 @@ import webpush from 'web-push';
 // Configurar VAPID keys
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@oxxo.com';
+const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@verdefrut.com';
 
 if (vapidPublicKey && vapidPrivateKey) {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
@@ -58,8 +58,6 @@ export async function sendChatNotification(reportId: string) {
             .select('id, role, metadata')
             .in('role', ['comercial', 'administrador']);
         
-        console.log('[Push Notification] Total usuarios comerciales y admins encontrados:', usuarios?.length || 0);
-        
         // Filtrar usuarios que tengan notificaciones activadas
         const usuariosConNotificaciones = usuarios?.filter(u => {
             const metadata = (u.metadata as Record<string, any>) || {};
@@ -71,14 +69,7 @@ export async function sendChatNotification(reportId: string) {
             return false;
         }) || [];
 
-        console.log('[Push Notification] Usuarios con notificaciones activadas:', {
-            total: usuariosConNotificaciones.length,
-            comerciales: usuariosConNotificaciones.filter(u => u.role === 'comercial').length,
-            administradores: usuariosConNotificaciones.filter(u => u.role === 'administrador').length,
-        });
-
         if (!usuariosConNotificaciones || usuariosConNotificaciones.length === 0) {
-            console.log('[Push Notification] No hay usuarios con notificaciones activadas');
             return { success: true, noSubscribers: true };
         }
 
@@ -90,7 +81,6 @@ export async function sendChatNotification(reportId: string) {
             .in('user_id', userIds);
 
         if (!subscriptions || subscriptions.length === 0) {
-            console.log('[Push Notification] No hay suscripciones push');
             return { success: true, noSubscriptions: true };
         }
 
@@ -114,15 +104,6 @@ export async function sendChatNotification(reportId: string) {
         
         // Crear un mapa de usuarios para obtener el rol
         const userRoleMap = new Map(usuariosConNotificaciones.map(u => [u.id, u.role]));
-
-        console.log('[Push Notification] Enviando notificaciones a TODOS los comerciales y admins:', {
-            totalSubscriptions: subscriptions.length,
-            totalUsuarios: usuariosConNotificaciones.length,
-            reportId,
-            storeName,
-            tipoReporte: tipoReporteLabel,
-            nota: 'Se envían a TODOS sin filtro de zona',
-        });
 
         // Enviar notificaciones a todas las suscripciones con URLs personalizadas según el rol
         const results = await Promise.allSettled(
@@ -167,7 +148,6 @@ export async function sendChatNotification(reportId: string) {
                         },
                         notificationPayload
                     );
-                    console.log('[Push Notification] Enviada exitosamente a:', subscription.id, 'URL:', chatUrl);
                     return { success: true, subscriptionId: subscription.id };
                 } catch (error: any) {
                     console.error('[Push Notification] Error enviando a suscripción:', subscription.id, error?.statusCode, error?.message);
@@ -186,12 +166,6 @@ export async function sendChatNotification(reportId: string) {
 
         const successful = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
         const failed = results.length - successful;
-
-        console.log('[Push Notification] Resultados:', {
-            successful,
-            failed,
-            total: subscriptions.length,
-        });
 
         return {
             success: true,

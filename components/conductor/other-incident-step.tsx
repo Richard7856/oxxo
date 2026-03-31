@@ -167,7 +167,7 @@ export default function OtherIncidentStep({
                 <button
                     onClick={handleSubmit}
                     disabled={saving || !description.trim()}
-                    className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                    className="w-full bg-[#1D6B2A] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#155120] transition-colors disabled:opacity-50"
                 >
                     {saving ? 'Guardando...' : 'Continuar'}
                 </button>

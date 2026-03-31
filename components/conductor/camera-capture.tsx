@@ -188,7 +188,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className="bg-red-600 text-white px-8 py-3 rounded-lg font-bold"
+                            className="bg-[#1D6B2A] text-white px-8 py-3 rounded-lg font-bold"
                         >
                             Confirmar
                         </button>

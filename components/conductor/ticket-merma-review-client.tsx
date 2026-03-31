@@ -88,13 +88,11 @@ export default function TicketMermaReviewClient({
         if (result.error) {
             throw new Error(result.error);
         }
-        
-        // Redirigir al paso final
-        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=finish`);
+        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=receipt_check`);
     };
 
     const handleBack = () => {
-        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=8c`);
+        router.push(`/conductor/nuevo-reporte/${reportId}/flujo?step=7_waste_ticket`);
     };
 
     if (loading) {

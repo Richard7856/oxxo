@@ -316,10 +316,10 @@ export async function initializeChat(reportId: string) {
 
     if (!user) return { error: 'No autorizado' };
 
-    // Obtener el reporte
+    // Obtener el reporte — campos mínimos necesarios para inicializar el chat
     const { data: report } = await supabase
         .from('reportes')
-        .select('*')
+        .select('status, tipo_reporte, timeout_at, submitted_at, evidence, store_nombre, store_codigo, store_zona, conductor_nombre')
         .eq('id', reportId)
         .eq('user_id', user.id)
         .single();
@@ -376,14 +376,10 @@ export async function initializeChat(reportId: string) {
 
     // Enviar notificación push al comercial
     try {
-        console.log('[Chat Notification] Enviando notificación para reporte:', reportId);
         const { sendChatNotification } = await import('@/lib/push/send-chat-notification');
         const result = await sendChatNotification(reportId);
-        
         if (result.error) {
             console.error('[Chat Notification] Error:', result.error);
-        } else {
-            console.log('[Chat Notification] Notificación enviada:', result);
         }
     } catch (err) {
         console.error('[Chat Notification] Error enviando notificación:', err);
@@ -898,7 +894,7 @@ export async function submitReport(reportId: string) {
     // Verificar que el reporte pertenece al usuario
     const { data: report } = await supabase
         .from('reportes')
-        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre, store_codigo, metadata, evidence, conductor_nombre, rechazo_details, ticket_data, ticket_image_url')
+        .select('id, status, ticket_data, ticket_extraction_confirmed, tipo_reporte, store_zona, store_nombre, store_codigo, metadata, evidence, conductor_nombre, rechazo_details, ticket_image_url')
         .eq('id', reportId)
         .eq('user_id', user.id)
         .single();
@@ -947,11 +943,8 @@ export async function submitReport(reportId: string) {
     try {
         const { sendChatNotification } = await import('@/lib/push/send-chat-notification');
         const notificationResult = await sendChatNotification(reportId);
-        
         if (notificationResult.error) {
             console.error('[Submit Report] Error enviando notificación:', notificationResult.error);
-        } else {
-            console.log('[Submit Report] Notificación enviada:', notificationResult);
         }
 
         // Crear mensaje de resumen del reporte en el chat

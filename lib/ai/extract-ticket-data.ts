@@ -1,6 +1,6 @@
 /**
  * Claude Ticket Data Extraction
- * Uses Anthropic Claude Vision to extract structured data from OXXO ticket images
+ * Uses Anthropic Claude Vision to extract structured data from Verdefrut ticket images
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -24,7 +24,7 @@ export interface ExtractedTicketData {
     rawResponse: string;
 }
 
-const EXTRACTION_SYSTEM_PROMPT = `Eres un asistente experto en extraer datos de tickets de compra OXXO (Cadena Comercial Oxxo, S.A. de C.V.).
+const EXTRACTION_SYSTEM_PROMPT = `Eres un asistente experto en extraer datos de tickets de compra y entrega de productos Verdefrut.
 
 Tu tarea es extraer TODOS los datos del ticket y devolverlos en formato JSON estricto:
 
@@ -70,8 +70,10 @@ export async function extractTicketData(
         throw new Error('ANTHROPIC_API_KEY no está configurada en las variables de entorno');
     }
 
+    // 60-second total timeout for the Anthropic SDK — vision requests with large images can take 30-45s
     const anthropic = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY,
+        timeout: 60_000,
     });
 
     try {
@@ -95,7 +97,7 @@ export async function extractTicketData(
                         },
                         {
                             type: 'text',
-                            text: 'Analiza este ticket OXXO y devuelve SOLO el objeto JSON con los datos extraídos, sin markdown ni texto adicional.',
+                            text: 'Analiza este ticket Verdefrut y devuelve SOLO el objeto JSON con los datos extraídos, sin markdown ni texto adicional.',
                         },
                     ],
                 },
@@ -107,11 +109,6 @@ export async function extractTicketData(
         if (!content) {
             throw new Error('No se recibió contenido de la API de Claude');
         }
-
-        console.log('=== RESPUESTA DE CLAUDE ===');
-        console.log('Longitud total:', content.length);
-        console.log('Primeros 500 caracteres:', content.substring(0, 500));
-        console.log('===========================');
 
         return parseAndNormalizeResponse(content);
     } catch (error: any) {
@@ -203,7 +200,20 @@ function parseNumericOrNull(value: unknown): number | null {
 }
 
 async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
-    const response = await fetch(imageUrl);
+    // 30-second timeout — large ticket images from Supabase Storage can be slow on cold start
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+    let response: Response;
+    try {
+        response = await fetch(imageUrl, { signal: controller.signal });
+    } catch (err: any) {
+        if (err.name === 'AbortError') throw new Error('Timeout al obtener la imagen (>30s)');
+        throw err;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+
     if (!response.ok) {
         throw new Error(`Error al obtener la imagen: ${response.status} ${response.statusText}`);
     }

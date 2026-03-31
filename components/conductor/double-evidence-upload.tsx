@@ -20,6 +20,47 @@ interface DoubleEvidenceUploadProps {
     secondOptional?: boolean;
 }
 
+// Compress images >2MB before upload — same threshold/settings as evidence-upload.tsx
+async function compressImage(file: File): Promise<File> {
+    const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+    const MAX_WIDTH = 1920;
+    const QUALITY = 0.85;
+
+    if (file.size <= MAX_SIZE_BYTES) return file;
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new window.Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+                if (width > MAX_WIDTH) {
+                    height = Math.round((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { resolve(file); return; }
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) { resolve(file); return; }
+                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                    },
+                    'image/jpeg',
+                    QUALITY
+                );
+            };
+            img.onerror = () => resolve(file);
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+    });
+}
+
 export default function DoubleEvidenceUpload({
     title,
     description,
@@ -50,7 +91,8 @@ export default function DoubleEvidenceUpload({
     const [error, setError] = useState<string | null>(null);
 
     const processFile = async (key: 'first' | 'second', file: File) => {
-        const objectUrl = URL.createObjectURL(file);
+        const compressed = await compressImage(file);
+        const objectUrl = URL.createObjectURL(compressed);
         // Revoke previous blob URL before replacing to avoid memory leak
         setPreviewUrls(prev => {
             const old = prev[key];
@@ -61,7 +103,7 @@ export default function DoubleEvidenceUpload({
         setError(null);
 
         try {
-            await onImageSelected(key, file);
+            await onImageSelected(key, compressed);
         } catch (err: any) {
             setError('Error al subir la imagen. Intenta nuevamente.');
             console.error(err);
@@ -200,7 +242,7 @@ export default function DoubleEvidenceUpload({
             <button
                 onClick={onContinue}
                 disabled={!previewUrls.first || uploading.first || uploading.second || loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full bg-[#1D6B2A] hover:bg-[#155120] text-white font-semibold py-3 px-8 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
                 {loading || uploading.first || uploading.second ? 'Procesando...' : 'Continuar'}
             </button>

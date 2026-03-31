@@ -17,6 +17,6 @@ CREATE INDEX idx_stores_codigo ON stores(codigo_tienda);
 CREATE INDEX idx_stores_zona ON stores(zona);
 
 -- Comments for documentation
-COMMENT ON TABLE stores IS 'OXXO store locations, validated via n8n integration';
+COMMENT ON TABLE stores IS 'Verdefrut store locations, validated via n8n integration';
 COMMENT ON COLUMN stores.codigo_tienda IS 'Unique store code identifier';
 COMMENT ON COLUMN stores.zona IS 'Geographic zone for comercial assignment';

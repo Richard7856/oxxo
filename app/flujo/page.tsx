@@ -5,7 +5,7 @@ export default function FlujoPage() {
 
                 {/* Header */}
                 <div className="mb-10 text-center">
-                    <h1 className="text-3xl font-bold text-white tracking-tight">OXXO Logistics</h1>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">Verdefrut</h1>
                     <p className="text-gray-400 mt-1 text-sm">Diagrama de flujos y vistas por rol</p>
                 </div>
 
@@ -93,34 +93,63 @@ export default function FlujoPage() {
                         <div className="ml-6 border-l-2 border-blue-800 pl-4 space-y-3">
                             <p className="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-2">Rama: Entrega</p>
 
-                            <FlowRow step="2a" label="Subir Evidencia de Llegada" route="/conductor/nuevo-reporte/[id]/flujo?step=evidence">
-                                <Detail>2 fotos requeridas: frente + interior del camión</Detail>
+                            <FlowRow step="4a" label="Fotos del Mueble (llegada)" route="?step=4a">
+                                <Detail>1 foto obligatoria + 1 opcional del mueble al llegar</Detail>
                                 <Detail>Compresión automática si &gt;2MB</Detail>
                             </FlowRow>
 
-                            <FlowRow step="2b" label="Carrito de Incidentes" route="/conductor/nuevo-reporte/[id]/flujo?step=incidents">
-                                <Detail>Selección de productos afectados de lista predefinida</Detail>
-                                <Detail>Foto por producto → sube a bucket evidence</Detail>
-                                <Detail>Tipos: rechazo completo / parcial / devolución / faltante / sobrante</Detail>
+                            <FlowRow step="?" label="¿Hubo incidencias?" route="?step=incident_check">
+                                <Detail>SI → Carrito de incidentes (paso 5) → chat con comercial</Detail>
+                                <Detail>NO → Salta directamente al paso 6</Detail>
                             </FlowRow>
 
-                            <FlowRow step="2c" label="Ticket Principal" route="/conductor/nuevo-reporte/[id]/flujo?step=ticket">
-                                <Detail>Sube foto del ticket de entrega</Detail>
-                                <Detail>Claude Vision (claude-sonnet-4-6) extrae datos estructurados</Detail>
-                                <Detail>Conductor revisa y confirma los datos extraídos</Detail>
+                            <FlowRow step="5" label="Carrito de Incidentes + Chat" route="?step=5 → /conductor/chat/[id]" badge="submitted">
+                                <Detail>Selección de productos afectados con foto por ítem</Detail>
+                                <Detail>submitIncidentReport → abre chat con comercial (20 min)</Detail>
+                                <Detail>Si timer expira → resolution_type: timed_out → continúa</Detail>
+                                <Detail>Si &quot;Problema Resuelto&quot; → selector inline: completa / parcial / sin_entrega</Detail>
+                                <Detail>sin_entrega → cierra ticket (finish); otros → paso 6</Detail>
                             </FlowRow>
 
-                            <FlowRow step="2d" label="Ticket de Merma (opcional)" route="/conductor/nuevo-reporte/[id]/ticket-merma-review">
-                                <Detail>Mismo flujo de extracción para ticket de devolución</Detail>
+                            <FlowRow step="6" label="Foto del Mueble (arreglado)" route="?step=6">
+                                <Detail>Foto del mueble después de arreglar la entrega</Detail>
                             </FlowRow>
 
-                            <FlowRow step="2e" label="Chat con Comercial" route="/conductor/chat/[id]" badge="submitted">
-                                <Detail>Timer 20 min en tiempo real (Supabase Realtime)</Detail>
-                                <Detail>Puede subir fotos adicionales al chat</Detail>
-                                <Detail>Botón &quot;Problema Resuelto&quot; → resolved_by_driver</Detail>
+                            <FlowRow step="?" label="¿Hubo merma?" route="?step=waste_check">
+                                <Detail>SI → foto ticket merma + extracción AI (paso 7)</Detail>
+                                <Detail>NO → ¿Hay foto de recibo?</Detail>
                             </FlowRow>
 
-                            <FlowRow step="2f" label="Finalizar" route="/conductor/nuevo-reporte/[id]/flujo?step=finish" badge="submitted">
+                            <FlowRow step="7" label="Ticket de Merma" route="?step=7_waste_ticket → /ticket-merma-review">
+                                <Detail>Foto del ticket de merma</Detail>
+                                <Detail>Claude Vision extrae datos → conductor revisa → receipt_check</Detail>
+                            </FlowRow>
+
+                            <FlowRow step="?" label="¿Hay foto de recibo de mercancía?" route="?step=receipt_check">
+                                <Detail>SI → sube foto + extracción AI (paso 8a)</Detail>
+                                <Detail>NO → registra razón (paso 8b)</Detail>
+                            </FlowRow>
+
+                            <FlowRow step="8a" label="Ticket de Recibo" route="?step=8a_receipt → /ticket-review">
+                                <Detail>Foto del recibo de mercancía</Detail>
+                                <Detail>Claude Vision extrae datos → conductor revisa → otra incidencia</Detail>
+                            </FlowRow>
+
+                            <FlowRow step="8b" label="Razón sin Recibo" route="?step=8b_no_reason">
+                                <Detail>Conductor ingresa motivo por el que no hay recibo</Detail>
+                            </FlowRow>
+
+                            <FlowRow step="?" label="¿Hubo otra incidencia?" route="?step=other_incident_check">
+                                <Detail>SI → descripción obligatoria + foto opcional (paso 9)</Detail>
+                                <Detail>NO → finalizar</Detail>
+                            </FlowRow>
+
+                            <FlowRow step="9" label="Otra Incidencia" route="?step=9_other_incident">
+                                <Detail>Descripción de texto obligatoria</Detail>
+                                <Detail>Foto de evidencia opcional</Detail>
+                            </FlowRow>
+
+                            <FlowRow step="fin" label="Finalizar" route="?step=finish" badge="submitted">
                                 <Detail>Confirmación y cierre del flujo conductor</Detail>
                             </FlowRow>
                         </div>
@@ -128,10 +157,21 @@ export default function FlujoPage() {
                         {/* Branch: Tienda Cerrada */}
                         <div className="ml-6 border-l-2 border-orange-800 pl-4 space-y-3">
                             <p className="text-orange-400 text-xs font-semibold uppercase tracking-widest mb-2">Rama: Tienda Cerrada</p>
-                            <FlowRow step="2a" label="Chat directo" route="/conductor/chat/[id]" badge="submitted">
-                                <Detail>Sin pasos de evidencia ni ticket</Detail>
-                                <Detail>Si expira el timer → auto-cierra con timed_out</Detail>
-                                <Detail>Comercial decide si la tienda abrió o no</Detail>
+                            <FlowRow step="4b" label="Chat directo" route="/conductor/chat/[id]" badge="submitted">
+                                <Detail>Sin pasos de evidencia previos</Detail>
+                                <Detail>Si la tienda abre en 20 min → driver confirma → flujo Entrega (paso 4a)</Detail>
+                                <Detail>Si no abre → &quot;No abrieron&quot; → cierre del ticket (finish)</Detail>
+                                <Detail>Si expira el timer → auto-cierra</Detail>
+                            </FlowRow>
+                        </div>
+
+                        {/* Branch: Báscula */}
+                        <div className="ml-6 border-l-2 border-gray-600 pl-4 space-y-3">
+                            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">Rama: Báscula</p>
+                            <FlowRow step="4c" label="Chat directo" route="/conductor/chat/[id]" badge="submitted">
+                                <Detail>Mismo comportamiento que Tienda Cerrada</Detail>
+                                <Detail>Si se resuelve → continúa flujo Entrega (paso 4a)</Detail>
+                                <Detail>Si no → cierre del ticket (finish)</Detail>
                             </FlowRow>
                         </div>
                     </div>
@@ -207,7 +247,7 @@ export default function FlujoPage() {
                     <div className="grid grid-cols-3 gap-3">
                         {[
                             { table: 'user_profiles', fields: ['id', 'role (conductor|comercial|administrador)', 'display_name', 'full_name', 'zona'] },
-                            { table: 'reportes', fields: ['id', 'user_id', 'store_codigo', 'store_nombre', 'tipo_reporte', 'status', 'evidence (JSONB)', 'ticket_data (JSONB)', 'timeout_at'] },
+                            { table: 'reportes', fields: ['id', 'user_id', 'store_codigo', 'store_nombre', 'tipo_reporte', 'status', 'evidence (JSONB)', 'ticket_data (JSONB)', 'timeout_at', 'incident_details (JSONB)', 'resolution_type (completa|parcial|sin_entrega|timed_out)', 'partial_failure_items (JSONB)', 'current_step'] },
                             { table: 'messages', fields: ['id', 'reporte_id', 'text', 'image_url', 'sender (user|agent|system)', 'sender_user_id', 'created_at'] },
                             { table: 'processed_tickets', fields: ['id', 'reporte_id', 'ticket_type', 'extracted_data', 'confirmed_at'] },
                             { table: 'stores', fields: ['id', 'codigo_tienda', 'nombre', 'zona', 'activo'] },
@@ -226,7 +266,7 @@ export default function FlujoPage() {
                 </Section>
 
                 <div className="text-center text-gray-700 text-xs mt-8">
-                    OXXO Logistics — Actualizado 2026 · Solo zona CDMX
+                    Verdefrut — Actualizado 2026
                 </div>
             </div>
         </div>
