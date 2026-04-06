@@ -1,344 +1,169 @@
-# OXXO Logistics System
+# Verdefrut — Sistema de Gestión de Entregas
 
-Sistema de logística y gestión de incidencias para entregas en tiendas OXXO.
+Sistema de gestión de entregas e incidencias para conductores y agentes comerciales de Verdefrut.
 
-## 🎯 Descripción
+## El Problema
 
-Aplicación web para gestión de reportes de entrega con tres roles de usuario:
+Cuando un conductor llega a una tienda y hay un problema con la entrega (rechazo, devolución, faltante), el proceso era manual y desconectado: papeles, llamadas, fotos por WhatsApp sin estructura. Los agentes comerciales no tenían visibilidad en tiempo real y no podían dar soporte rápido.
 
-- **Conductores**: Crean reportes de entregas con evidencia fotográfica
-- **Comerciales**: Monitorean y resuelven incidencias por zona
-- **Administradores**: Gestión completa de usuarios, zonas y exportaciones
+## La Solución
 
-## 🏗️ Arquitectura
+Una PWA (Progressive Web App) que guía al conductor paso a paso durante la entrega, captura evidencia fotográfica, extrae datos de tickets con IA, y conecta al conductor con el agente comercial de su zona via chat en tiempo real — todo desde el celular, sin instalar nada.
 
-### Stack Tecnológico
+---
 
-- **Frontend**: Next.js 14 (App Router), React, TypeScript, TailwindCSS, shadcn/ui
-- **Backend**: Supabase (Auth, Postgres, Storage)
-- **IA**: OpenAI GPT-4 (extracción de datos, análisis de chat)
-- **Integración**: n8n (validación de tiendas, notificaciones)
+## Funcionalidades
 
-### Estado del Sistema
+### Para el Conductor
+- **Flujo guiado de entrega**: asistente paso a paso (tienda → tipo de reporte → evidencia → ticket → envío)
+- **5 tipos de reporte**: Rechazo Completo, Rechazo Parcial, Devolución, Faltante, Sobrante
+- **Captura de evidencia**: fotos comprimidas automáticamente (<2MB, calidad 85%)
+- **Extracción de tickets con IA**: Claude Vision lee el ticket y extrae número, fecha, total e ítems automáticamente
+- **Chat en tiempo real**: comunicación directa con el agente comercial durante el reporte
+- **Timer de 20 minutos**: cuenta regresiva visible para resolver la incidencia antes del timeout
+- **Borrador persistente**: si cierra la app, puede continuar donde quedó
 
-El sistema utiliza una **máquina de estados unificada** para gestionar el ciclo de vida de los reportes:
+### Para el Agente Comercial
+- **Dashboard por zona**: ve todos los reportes enviados en su zona en tiempo real
+- **Chat con el conductor**: responde directamente desde el panel, puede enviar imágenes
+- **Resolución de incidencias**: marca reportes como resueltos con comentario
+- **Notificaciones push**: recibe alerta cuando un conductor envía un reporte nuevo
+
+### Para el Administrador
+- **Gestión de usuarios**: asigna roles (conductor/comercial/administrador) y zonas
+- **Catálogo de tiendas**: alta y gestión de tiendas por zona
+- **Exportación de datos**: descarga reportes en CSV/Excel para análisis
+
+### Técnicas
+- **PWA instalable**: funciona como app nativa en iOS y Android, sin App Store
+- **Notificaciones push**: via Web Push (VAPID), incluso con la app cerrada
+- **Autenticación segura**: Supabase Auth + cookies httpOnly + middleware de sesión
+- **RLS en base de datos**: conductores solo ven sus reportes, comerciales solo su zona
+
+---
+
+## Stack Tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | Next.js 16 (App Router), React, TypeScript, Tailwind CSS |
+| Backend | Next.js API Routes, Server Actions |
+| Base de Datos | Supabase (PostgreSQL + Realtime + RLS) |
+| Autenticación | Supabase Auth |
+| Storage | Supabase Storage (buckets: `evidence`, `ticket-images`) |
+| IA — Extracción de tickets | Claude Vision (claude-sonnet-4-6) |
+| IA — Análisis de resolución | Claude (analyze-resolution) |
+| Notificaciones Push | Web Push API + VAPID |
+| PWA | next-pwa + Service Worker personalizado |
+| Integraciones | n8n (validación de tiendas) |
+| Deployment | Docker + Traefik en VPS |
+
+---
+
+## Arquitectura de Roles
 
 ```
-draft → submitted → resolved_by_driver/timed_out → completed → archived
+/login                    → Todos los usuarios
+/                         → Selector de rol (según perfil en DB)
+/conductor/               → Conductores y Administradores
+/comercial/               → Agentes Comerciales y Administradores
+/admin/                   → Solo Administradores
 ```
 
-## 📋 Requisitos Previos
+### Ciclo de Vida del Reporte
+
+```
+draft → submitted → resolved_by_driver
+                 → timed_out          → completed → archived
+```
+
+Los reportes en `submitted` tienen 20 minutos para ser resueltos. Pasado ese tiempo cambian a `timed_out` automáticamente.
+
+---
+
+## Instalación
+
+### Requisitos
 
 - Node.js 18+
-- npm o pnpm
 - Cuenta de Supabase
-- Cuenta de OpenAI (API key)
-- Instancia de n8n (opcional para producción)
+- API Key de Anthropic (Claude)
+- Instancia de n8n (para validación de tiendas)
 
-## 🚀 Instalación
+### Variables de entorno
 
-### 1. Clonar e instalar dependencias
+Crear `.env.local`:
 
-```bash
-cd oxxo-logistics
-npm install
-```
-
-### 2. Configurar Supabase
-
-1. Crear un proyecto en [Supabase](https://supabase.com)
-2. Copiar las credenciales (URL y keys)
-3. Ejecutar las migraciones en orden:
-
-```bash
-# En Supabase SQL Editor, ejecutar en orden:
-001_create_enums.sql
-002_create_stores.sql
-003_create_user_profiles.sql
-004_create_reportes.sql
-005_create_messages.sql
-006_create_processed_tickets.sql
-007_create_triggers.sql
-008_enable_rls.sql
-009_rls_user_profiles.sql
-010_rls_stores.sql
-011_rls_reportes.sql
-012_rls_messages.sql
-013_rls_processed_tickets.sql
-014_create_functions.sql
-```
-
-### 3. Configurar variables de entorno
-
-Copiar `ENV_TEMPLATE.md` y crear `.env.local`:
-
-```.env
+```env
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_PROJECT_ID=your_project_id
 
-# OpenAI
-OPENAI_API_KEY=sk-your_api_key
+# Anthropic (Claude Vision + análisis de chat)
+ANTHROPIC_API_KEY=sk-ant-your_key
 
-# n8n (opcional)
+# n8n
 N8N_VALIDATE_STORE_URL=https://your-n8n.com/webhook/validate-store
-N8N_NOTIFY_AGENTS_URL=https://your-n8n.com/webhook/notify-agents
-N8N_WEBHOOK_SECRET=your_secret
+N8N_TEMPLATE_URL=https://your-n8n.com/webhook/template
+
+# Push Notifications (generar con: node scripts/generate-vapid-keys.js)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_vapid_public_key
+VAPID_PRIVATE_KEY=your_vapid_private_key
+VAPID_SUBJECT=mailto:admin@verdefrut.com
 
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
-### 4. Configurar Storage en Supabase
+### Base de Datos
 
-1. Ir a Storage en Supabase Dashboard
-2. Crear bucket `ticket-images` con las siguientes configuraciones:
-   - Public: No
-   - File size limit: 10MB
-   - Allowed MIME types: `image/jpeg, image/png, image/webp`
-
-3. Aplicar RLS policies en el bucket:
-
-```sql
--- Allow authenticated users to upload images
-CREATE POLICY "Users can upload own images"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'ticket-images' AND
-  (storage.foldername(name))[1] = auth.uid()::text
-);
-
--- Allow users to read their own images
-CREATE POLICY "Users can read own images"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (
-  bucket_id = 'ticket-images' AND
-  (storage.foldername(name))[1] = auth.uid()::text
-);
-```
-
-### 5. Crear primer usuario administrador
-
-```sql
--- En Supabase SQL Editor
-INSERT INTO auth.users (email, encrypted_password)
-VALUES ('admin@oxxo.com', crypt('your_password', gen_salt('bf')));
-
--- Obtener el UUID del usuario creado y agregar perfil
-INSERT INTO user_profiles (id, email, display_name, role)
-VALUES (
-  'UUID_DEL_USUARIO',
-  'admin@oxxo.com',
-  'Administrador',
-  'administrador'
-);
-```
-
-### 6. Ejecutar en desarrollo
+Ejecutar las migraciones en orden en el SQL Editor de Supabase:
 
 ```bash
+supabase/migrations/001_create_enums.sql
+supabase/migrations/002_create_stores.sql
+...hasta...
+supabase/migrations/025_*.sql
+```
+
+### Ejecutar en desarrollo
+
+```bash
+npm install
 npm run dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000)
-
-## 📁 Estructura del Proyecto
-
-```
-oxxo-logistics/
-├── app/                      # Next.js App Router
-│   ├── (auth)/              # Rutas de autenticación
-│   ├── (conductor)/         # Panel de conductores
-│   ├── (comercial)/         # Panel de comerciales
-│   ├── (admin)/             # Panel de administradores
-│   └── api/                 # API routes
-├── lib/
-│   ├── supabase/           # Clientes de Supabase
-│   ├── ai/                 # Integraciones OpenAI
-│   ├── state-machines/     # Máquina de estados
-│   └── types/              # TypeScript types
-├── components/
-│   ├── ui/                 # shadcn/ui components
-│   ├── forms/              # Formularios
-│   ├── chat/               # Sistema de chat
-│   └── dashboard/          # Dashboards
-└── supabase/
-    └── migrations/         # Migraciones SQL
-```
-
-## 🔐 Seguridad
-
-### Row Level Security (RLS)
-
-Todas las tablas tienen RLS habilitado con políticas específicas por rol:
-
-- **Conductores**: Acceso solo a sus propios reportes
-- **Comerciales**: Acceso solo a reportes de su zona
-- **Administradores**: Acceso completo
-
-### Autenticación
-
-- Supabase Auth con email/password
-- Sesiones gestionadas con cookies seguras
-- Middleware para protección de rutas
-
-## 🤖 Integraciones IA
-
-### Extracción de Tickets (GPT-4 Vision)
-
-```typescript
-import { extractTicketData } from '@/lib/ai/extract-ticket-data';
-
-const result = await extractTicketData(imageUrl);
-// { numero, fecha, total, items, confidence }
-```
-
-### Análisis de Resolución (GPT-4)
-
-```typescript
-import { analyzeChatResolution } from '@/lib/ai/analyze-resolution';
-
-const analysis = await analyzeChatResolution(message, context);
-// { isResolved, confidence, reasoning }
-```
-
-## 🔄 Máquina de Estados
-
-```typescript
-import { createStateMachine } from '@/lib/state-machines/reporte-state';
-
-const machine = createStateMachine(reporte, chatMessageCount);
-
-// Verificar transición válida
-if (machine.canTransition('SUBMIT')) {
-  const newState = machine.transition('SUBMIT');
-}
-
-// Obtener transiciones válidas
-const validEvents = machine.getValidTransitions();
-```
-
-## 🌐 n8n Webhooks
-
-### Validar Tienda
-
-**Endpoint**: `POST /api/webhooks/validate-store`
-
-```json
-{
-  "codigo_tienda": "12345"
-}
-```
-
-**Respuesta**:
-```json
-{
-  "valid": true,
-  "store": {
-    "codigo": "12345",
-    "nombre": "OXXO Centro",
-    "zona": "Norte",
-    "direccion": "..."
-  }
-}
-```
-
-### Notificar Agentes
-
-Disparado automáticamente cuando `reporte.status` cambia a `submitted`.
-
-## ⏲️ Timeout Management
-
-El sistema implementa un timeout de 20 minutos para reportes en estado `submitted`.
-
-**Opciones de implementación**:
-
-1. **Vercel Cron** (Recomendado):
-
-```typescript
-// app/api/cron/check-timeouts/route.ts
-export async function GET() {
-  // Actualizar reportes vencidos
-}
-```
-
-2. **n8n Workflow** (5 minutos):
-
-```sql
-UPDATE reportes
-SET status = 'timed_out'
-WHERE status = 'submitted'
-  AND timeout_at < NOW();
-```
-
-## 📊 Tipos de Reporte
-
-1. **Rechazo Completo**: Tienda rechaza toda la entrega
-2. **Rechazo Parcial**: Tienda rechaza algunos productos
-3. **Devolución**: Conductor devuelve productos
-4. **Faltante**: Faltan productos en la entrega
-5. **Sobrante**: Sobran productos en la entrega
-
-## 🧪 Testing
+### Build de producción
 
 ```bash
-# Unit tests
-npm run test
-
-# Integration tests
-npm run test:integration
-
-# E2E tests
-npm run test:e2e
+npm run build   # Incluye inyección del service worker de push
 ```
-
-## 🚢 Deployment
-
-### Vercel (Recomendado)
-
-```bash
-npm run build
-vercel --prod
-```
-
-Configurar variables de entorno en Vercel Dashboard.
-
-### Docker
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-CMD ["npm", "start"]
-```
-
-## 📝 Roadmap
-
-- [ ] Implementar componentes UI con shadcn/ui
-- [ ] Desarrollar flujo completo de conductor
-- [ ] Crear dashboard de comerciales
-- [ ] Construir panel de administración
-- [ ] Implementar sistema de chat en tiempo real
-- [ ] Agregar exportaciones CSV/Excel
-- [ ] Tests unitarios y de integración
-- [ ] Documentación de API
-
-## 🤝 Contribuir
-
-Este proyecto sigue las convenciones de [Conventional Commits](https://www.conventionalcommits.org/).
-
-## 📄 Licencia
-
-Propietario - OXXO Logistics
 
 ---
 
-**Arquitectura diseñada por**: Google Deepmind Antigravity
-**Versión**: 0.1.0
+## Comandos útiles
+
+```bash
+npm run dev              # Servidor de desarrollo
+npm run build            # Build de producción
+npm run lint             # ESLint
+npm run db:types         # Regenerar tipos TypeScript desde Supabase
+node scripts/generate-vapid-keys.js   # Generar claves VAPID para push
+```
+
+---
+
+## Seguridad
+
+- **RLS activo en todas las tablas**: cada rol solo accede a lo que le corresponde
+- **Middleware de sesión**: protege todas las rutas, redirige a `/login` si no hay sesión
+- **Service Role Key**: solo usada en server-side (API routes, Server Actions)
+- **Imágenes de tickets**: bucket privado con políticas de acceso por `user_id`
+
+---
+
+## Licencia
+
+Propietario — Verdefrut
